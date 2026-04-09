@@ -1,0 +1,2 @@
+# BestRuralEvents_Frontend
+init
