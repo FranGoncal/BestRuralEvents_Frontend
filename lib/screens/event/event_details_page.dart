@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../models/event.dart';
 import '../../models/event_review.dart';
 import '../../services/event_service.dart';
+import '../../widgets/expandable_text.dart';
+
 
 class EventDetailsPage extends StatefulWidget {
   final Event event;
@@ -329,11 +331,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  Text(
-                    widget.event.description ?? 'No description available.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      height: 1.5,
-                    ),
+                  ExpandableText(
+                    text: widget.event.description ?? 'No description available.',
                   ),
 
                   const SizedBox(height: 28),
