@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import 'signup_page.dart';
 
 //stateful because it changes as the user interacts with it (password hidden/visible, loading, text field, form validation)
 class LoginPage extends StatefulWidget {
@@ -100,8 +101,13 @@ class _LoginPageState extends State<LoginPage> {
 
   //when user clicks in signup button
   void _goToSignUp() {
-    //debug toast
-    _showMessage('Navigate to Sign Up page');
+    Navigator.push(
+      //widget location in the tree
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SignUpPage(),
+      ),
+    );
   }
 
   //Visual structure of the screen (the 'html/css/...' of flutter)

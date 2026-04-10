@@ -4,16 +4,14 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-//Custom result object
-class LoginResult {
+//Custom result object (4 login and signup)
+class AuthResult {
   final bool success;
   final String message;
-  //Json
   final Map<String, dynamic>? data;
   final int? statusCode;
 
-  //constructure
-  LoginResult({
+  AuthResult({
     required this.success,
     required this.message,
     this.data,
@@ -30,7 +28,7 @@ class AuthService {
 
   // Returns result async way -> Future
   // func responsible for the
-  Future<LoginResult> login({
+  Future<AuthResult> login({
     required String email,
     required String password,
   }) async {
@@ -48,8 +46,7 @@ class AuthService {
           'email': email,
           'password': password,
         }),
-      )
-          .timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 8));
 
       // var to decode body into dart map
       Map<String, dynamic>? decodedBody;
@@ -58,7 +55,7 @@ class AuthService {
       try {
         decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
       } catch (_) {
-        return LoginResult(
+        return AuthResult(
           success: false,
           message: 'Backend responded, but body is not valid JSON.',
           statusCode: response.statusCode,
@@ -74,7 +71,7 @@ class AuthService {
         // has expected parameters in the response
         if (hasToken && hasUserId && hasEmail) {
           //method login returns a login success response to the login screen
-          return LoginResult(
+          return AuthResult(
             success: true,
             message: 'Login success. Expected JSON received.',
             data: decodedBody,
@@ -82,7 +79,7 @@ class AuthService {
           );
         } else {
           //method login returns a login success response but wrong json
-          return LoginResult(
+          return AuthResult(
             success: false,
             message:
             'Backend responded 2xx, but JSON is not in expected format. Expected: token + userId + email.',
@@ -92,7 +89,7 @@ class AuthService {
         }
       }
       // unsuccessful response (error, forbidden...)
-      return LoginResult(
+      return AuthResult(
         success: false,
         message: 'Backend responded with error status ${response.statusCode}.',
         data: decodedBody,
@@ -101,30 +98,128 @@ class AuthService {
 
       //Exception handling
     } on SocketException {
-      return LoginResult(
+      return AuthResult(
         success: false,
         message: 'No response. Could not connect to backend.',
       );
     } on HttpException {
-      return LoginResult(
+      return AuthResult(
         success: false,
         message: 'HTTP error while contacting backend.',
       );
     } on FormatException {
-      return LoginResult(
+      return AuthResult(
         success: false,
         message: 'Invalid response format from backend.',
       );
     } on TimeoutException {
-      return LoginResult(
+      return AuthResult(
         success: false,
         message: 'No response. Request timed out.',
       );
     } catch (e) {
-      return LoginResult(
+      return AuthResult(
         success: false,
         message: 'Unexpected error: $e',
       );
     }
   }
+
+  // Request for signup called in signup screen
+  Future<AuthResult> signUp({
+    required String name,
+    required String email,
+    required String birthDate,
+    required String password,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/signup');
+
+    try {
+      final response = await http
+          .post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'birthDate': birthDate,
+          'password': password,
+        }),
+      )
+          .timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic>? decodedBody;
+
+      try {
+        //json response to map
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return AuthResult(
+          success: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final hasMessage = decodedBody['message'] is String;
+        final hasUserId = decodedBody['userId'] != null;
+        final hasEmail = decodedBody['email'] is String;
+
+        if (hasMessage && hasUserId && hasEmail) {
+          return AuthResult(
+            success: true,
+            message: 'Signup success. Expected JSON received.',
+            data: decodedBody,
+            statusCode: response.statusCode,
+          );
+        } else {
+          return AuthResult(
+            success: false,
+            message:
+            'Backend responded 2xx, but JSON is not in expected format. Expected: message + userId + email.',
+            data: decodedBody,
+            statusCode: response.statusCode,
+          );
+        }
+      }
+      //exception handling
+      return AuthResult(
+        success: false,
+        message: 'Backend responded with error status ${response.statusCode}.',
+        data: decodedBody,
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return AuthResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+      );
+    } on HttpException {
+      return AuthResult(
+        success: false,
+        message: 'HTTP error while contacting backend.',
+      );
+    } on FormatException {
+      return AuthResult(
+        success: false,
+        message: 'Invalid response format from backend.',
+      );
+    } on TimeoutException {
+      return AuthResult(
+        success: false,
+        message: 'No response. Request timed out.',
+      );
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        message: 'Unexpected error: $e',
+      );
+    }
+  }
+
+
+
 }
