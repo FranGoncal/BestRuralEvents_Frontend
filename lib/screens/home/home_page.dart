@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../models/home_event.dart';
+import '../../models/event.dart';
 import '../../services/event_service.dart';
+import '../event/event_details_page.dart';
 
 class HomePage extends StatefulWidget {
   final String token;
@@ -27,7 +28,7 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   String? _errorMessage;
   String? _lastUpdated;
-  List<HomeEvent> _events = [];
+  List<Event> _events = [];
 
   @override
   void initState() {
@@ -236,6 +237,7 @@ class _HomePageState extends State<HomePage> {
                   event: event,
                   formattedDate: _formatDate(event.date),
                   formattedPrice: _formatPrice(event.price),
+                  token: widget.token,
                 ),
               ),
         ],
@@ -279,14 +281,16 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _EventCard extends StatelessWidget {
-  final HomeEvent event;
+  final Event event;
   final String formattedDate;
   final String formattedPrice;
+  final String token;
 
   const _EventCard({
     required this.event,
     required this.formattedDate,
     required this.formattedPrice,
+    required this.token,
   });
 
   @override
@@ -378,10 +382,10 @@ class _EventCard extends StatelessWidget {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Event details page comes next'),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EventDetailsPage(event: event, token: token,),
                         ),
                       );
                     },

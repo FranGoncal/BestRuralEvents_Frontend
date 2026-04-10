@@ -4,12 +4,13 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../models/home_event.dart';
+import '../models/event.dart';
+import '../models/event_review.dart';
 
 class HomeEventsResult {
   final bool success;
   final String message;
-  final List<HomeEvent> events;
+  final List<Event> events;
   final int? statusCode;
   final String? lastUpdated;
   final bool loadedFromCache;
@@ -41,8 +42,124 @@ class MainPageMetaResult {
 class EventService {
   static const String baseUrl = 'http://192.168.1.68:8080';
 
-  static List<HomeEvent>? _cachedEvents;
+  static List<Event>? _cachedEvents;
   static String? _cachedLastUpdated;
+
+  Future<bool> getIsFavorite({
+    required String token,
+    required int eventId,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/$eventId/favorite');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+        return decodedBody['isFavorite'] as bool? ?? false;
+      }
+
+      return false;
+    } on SocketException {
+      return false;
+    } on TimeoutException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<List<EventReview>> getReviews({
+    required String token,
+    required int eventId,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/$eventId/reviews');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+        final reviewsJson = decodedBody['reviews'];
+
+        if (reviewsJson is! List) return [];
+
+        return reviewsJson
+            .map((item) => EventReview.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+
+      return [];
+    } on SocketException {
+      return [];
+    } on TimeoutException {
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> addFavorite({
+    required String token,
+    required int eventId,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/$eventId/favorite');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } on SocketException {
+      return false;
+    } on TimeoutException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> removeFavorite({
+    required String token,
+    required int eventId,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/$eventId/favorite');
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } on SocketException {
+      return false;
+    } on TimeoutException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<MainPageMetaResult> checkMainPageEventsMeta({
     String? token,
@@ -161,7 +278,7 @@ class EventService {
         }
 
         final events = eventsJson
-            .map((item) => HomeEvent.fromJson(item as Map<String, dynamic>))
+            .map((item) => Event.fromJson(item as Map<String, dynamic>))
             .toList();
 
         _cachedEvents = events;
