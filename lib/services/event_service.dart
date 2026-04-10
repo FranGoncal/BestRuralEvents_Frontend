@@ -1,0 +1,238 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
+import '../models/home_event.dart';
+
+class HomeEventsResult {
+  final bool success;
+  final String message;
+  final List<HomeEvent> events;
+  final int? statusCode;
+  final String? lastUpdated;
+  final bool loadedFromCache;
+
+  HomeEventsResult({
+    required this.success,
+    required this.message,
+    required this.events,
+    this.statusCode,
+    this.lastUpdated,
+    this.loadedFromCache = false,
+  });
+}
+
+class MainPageMetaResult {
+  final bool success;
+  final String message;
+  final String? lastUpdated;
+  final int? statusCode;
+
+  MainPageMetaResult({
+    required this.success,
+    required this.message,
+    this.lastUpdated,
+    this.statusCode,
+  });
+}
+
+class EventService {
+  static const String baseUrl = 'http://192.168.1.68:8080';
+
+  static List<HomeEvent>? _cachedEvents;
+  static String? _cachedLastUpdated;
+
+  Future<MainPageMetaResult> checkMainPageEventsMeta({
+    String? token,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/main-page/meta');
+
+    try {
+      final response = await http
+          .get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+      )
+          .timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic>? decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return MainPageMetaResult(
+          success: false,
+          message: 'Backend responded, but meta body is not valid JSON.',
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final lastUpdated = decodedBody['lastUpdated']?.toString();
+
+        if (lastUpdated == null || lastUpdated.isEmpty) {
+          return MainPageMetaResult(
+            success: false,
+            message:
+            'Backend responded 2xx, but meta JSON is not in expected format. Expected: lastUpdated.',
+            statusCode: response.statusCode,
+          );
+        }
+
+        return MainPageMetaResult(
+          success: true,
+          message: 'Main page meta loaded successfully.',
+          lastUpdated: lastUpdated,
+          statusCode: response.statusCode,
+        );
+      }
+
+      return MainPageMetaResult(
+        success: false,
+        message: 'Backend responded with error status ${response.statusCode}.',
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return MainPageMetaResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+      );
+    } on TimeoutException {
+      return MainPageMetaResult(
+        success: false,
+        message: 'No response. Request timed out.',
+      );
+    } catch (e) {
+      return MainPageMetaResult(
+        success: false,
+        message: 'Unexpected error: $e',
+      );
+    }
+  }
+
+  Future<HomeEventsResult> getMainPageEvents({
+    String? token,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/main-page');
+
+    try {
+      final response = await http
+          .get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+      )
+          .timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic>? decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return HomeEventsResult(
+          success: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          events: [],
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final lastUpdated = decodedBody['lastUpdated']?.toString();
+        final eventsJson = decodedBody['events'];
+
+        if (lastUpdated == null || eventsJson is! List) {
+          return HomeEventsResult(
+            success: false,
+            message:
+            'Backend responded 2xx, but JSON is not in expected format. Expected: lastUpdated + events.',
+            events: [],
+            statusCode: response.statusCode,
+          );
+        }
+
+        final events = eventsJson
+            .map((item) => HomeEvent.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        _cachedEvents = events;
+        _cachedLastUpdated = lastUpdated;
+
+        return HomeEventsResult(
+          success: true,
+          message: 'Main page events loaded successfully.',
+          events: events,
+          statusCode: response.statusCode,
+          lastUpdated: lastUpdated,
+          loadedFromCache: false,
+        );
+      }
+
+      return HomeEventsResult(
+        success: false,
+        message: 'Backend responded with error status ${response.statusCode}.',
+        events: [],
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return HomeEventsResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+        events: [],
+      );
+    } on TimeoutException {
+      return HomeEventsResult(
+        success: false,
+        message: 'No response. Request timed out.',
+        events: [],
+      );
+    } catch (e) {
+      return HomeEventsResult(
+        success: false,
+        message: 'Unexpected error: $e',
+        events: [],
+      );
+    }
+  }
+
+  Future<HomeEventsResult> loadMainPageEventsSmart({
+    String? token,
+  }) async {
+    if (_cachedEvents == null || _cachedLastUpdated == null) {
+      return getMainPageEvents(token: token);
+    }
+
+    final metaResult = await checkMainPageEventsMeta(token: token);
+
+    if (!metaResult.success) {
+      return HomeEventsResult(
+        success: true,
+        message: 'Using cached events. Meta check failed.',
+        events: _cachedEvents!,
+        lastUpdated: _cachedLastUpdated,
+        loadedFromCache: true,
+      );
+    }
+
+    if (metaResult.lastUpdated == _cachedLastUpdated) {
+      return HomeEventsResult(
+        success: true,
+        message: 'Using cached events. Backend list is unchanged.',
+        events: _cachedEvents!,
+        lastUpdated: _cachedLastUpdated,
+        loadedFromCache: true,
+      );
+    }
+
+    return getMainPageEvents(token: token);
+  }
+}

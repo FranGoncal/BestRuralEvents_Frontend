@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'signup_page.dart';
+import '../home/home_page.dart';
 
 //stateful because it changes as the user interacts with it (password hidden/visible, loading, text field, form validation)
 class LoginPage extends StatefulWidget {
@@ -72,22 +73,34 @@ class _LoginPageState extends State<LoginPage> {
 
     //in case request was success 200
     if (result.success) {
-      //checking response content
       final token = result.data?['token']?.toString() ?? '';
       final userId = result.data?['userId']?.toString() ?? 'unknown';
       final email = result.data?['email']?.toString() ?? 'unknown';
 
-      //token trim for debug toast
       final shortToken =
       token.isNotEmpty ? token.substring(0, token.length > 12 ? 12 : token.length) : 'no token';
 
-      //debug toast
       _showMessage(
         'OK: ${result.message}\nuserId: $userId\nemail: $email\ntoken: $shortToken...',
         backgroundColor: Colors.green,
       );
-      //debug console print
+
       debugPrint('FULL SUCCESS JSON: ${result.data}');
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomePage(
+            token: token,
+            userId: userId,
+            email: email,
+          ),
+        ),
+      );
     } else {
       //debug toast in case not 200 success
       _showMessage(

@@ -24,7 +24,7 @@ class AuthService {
   // Android emulator -> http://10.0.2.2:8080
   // Mockoon -> http://localhost:8080
   // Real device -> http://PC_IP:8080
-  static const String baseUrl = 'http://localhost:8080';
+  static const String baseUrl = 'http://192.168.1.68:8080';
 
   // Returns result async way -> Future
   // func responsible for the
