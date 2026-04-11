@@ -15,3 +15,6 @@ Users can browse events, view details, purchase tickets, and manage their profil
 The app communicates with the backend via the **API Gateway**, consuming REST APIs and handling authentication using JWT tokens.
 
 Built with Flutter, the app demonstrates cross-platform mobile development integrated with a scalable microservices architecture.
+
+---
+For a some deeper [documentation](https://deepwiki.com/FranGoncal/BestRuralEvents_Frontend).
