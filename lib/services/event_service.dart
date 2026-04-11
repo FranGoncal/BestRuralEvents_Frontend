@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
-
+import '../config/app_config.dart';
 import '../models/event.dart';
 import '../models/event_review.dart';
 
@@ -44,7 +43,7 @@ class MainPageMetaResult {
 
 class EventService {
   //TODO
-  static const String baseUrl = 'http://localhost:8080';
+  static String get baseUrl => AppConfig.baseUrl;
 
   static List<Event>? _cachedEvents;
   static String? _cachedLastUpdated;

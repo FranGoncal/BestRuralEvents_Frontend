@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'screens/auth/login_page.dart';
 import 'services/session_service.dart';
 import 'screens/main/main_navigation_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 //Entry point of the whole Flutter app
 
 // This is the App's entry point
 // The app starts running here first
-void main() {
-  //runApp lauching root Widget (top level)
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
   runApp(const BestRuralEventsApp());
 }
 

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
+
 // Custom object used to return auth operation results in a clean structured way.
 class AuthResult {
   final bool success;
@@ -24,7 +26,7 @@ class AuthService {
   // Mockoon -> http://localhost:8080
   // Real device -> http://PC_IP:8080
   // TODO
-  static const String baseUrl = 'http://localhost:8080';
+  static String get baseUrl => AppConfig.baseUrl;
 
   // Returns result async way -> Future
   // func responsible for the login
