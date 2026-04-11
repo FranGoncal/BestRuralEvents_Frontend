@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-
+import '../home//profile_page.dart';
 import '../../models/event.dart';
 import '../../services/event_service.dart';
 import '../event/event_details_page.dart';
 
-class HomePage extends StatefulWidget {
+class HomeTab extends StatefulWidget {
   final String token;
   final String userId;
   final String email;
 
-  const HomePage({
+  const HomeTab({
     super.key,
     required this.token,
     required this.userId,
@@ -17,13 +17,12 @@ class HomePage extends StatefulWidget {
   });
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomeTab> createState() => _HomeTabState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomeTabState extends State<HomeTab> {
   final EventService _eventService = EventService();
 
-  int _selectedIndex = 0;
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -44,30 +43,6 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: backgroundColor,
       ),
     );
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        _showMessage('Home');
-        break;
-      case 1:
-        _showMessage('Search page coming next');
-        break;
-      case 2:
-        _showMessage('My Activity page coming next');
-        break;
-      case 3:
-        _showMessage('My Events page coming next');
-        break;
-      case 4:
-        _showMessage('Profile page coming next');
-        break;
-    }
   }
 
   Future<void> _loadEvents() async {
@@ -124,158 +99,99 @@ class _HomePageState extends State<HomePage> {
     const primaryGreen = Color(0xFF2E7D32);
     const lightGray = Color(0xFFE0E0E0);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: primaryGreen,
-        elevation: 0,
-        toolbarHeight: 80,
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/images/app_icon.png',
-              width: 58,
-              height: 58,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Best Rural Events',
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Text(
+          'Discover Rural Experiences',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: primaryGreen,
+          ),
         ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
+        const SizedBox(height: 8),
+        Text(
+          'Featured events selected for the main page',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Logged in as: ${widget.email}',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+        ),
+        if (_lastUpdated != null) ...[
+          const SizedBox(height: 4),
           Text(
-            'Discover Rural Experiences',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Featured events selected for the main page',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Logged in as: ${widget.email}',
+            'Backend lastUpdated: $_lastUpdated',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
           ),
-          if (_lastUpdated != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Backend lastUpdated: $_lastUpdated',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-            ),
-          ],
-          const SizedBox(height: 20),
+        ],
+        const SizedBox(height: 20),
 
-          if (_isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.only(top: 40),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (_errorMessage != null)
+        if (_isLoading)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 40),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_errorMessage != null)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: lightGray),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 42,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Could not load main page events',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else if (_events.isEmpty)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 border: Border.all(color: lightGray),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 42,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Could not load main page events',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              child: const Text(
+                'No featured events available right now.',
+                textAlign: TextAlign.center,
               ),
             )
-          else if (_events.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: lightGray),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  'No featured events available right now.',
-                  textAlign: TextAlign.center,
-                ),
-              )
-            else
-              ..._events.map(
-                    (event) => _EventCard(
-                  event: event,
-                  formattedDate: _formatDate(event.date),
-                  formattedPrice: _formatPrice(event.price),
-                  token: widget.token,
-                ),
+          else
+            ..._events.map(
+                  (event) => _EventCard(
+                event: event,
+                formattedDate: _formatDate(event.date),
+                formattedPrice: _formatPrice(event.price),
+                token: widget.token,
               ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: primaryGreen,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_activity_outlined),
-            activeIcon: Icon(Icons.local_activity),
-            label: 'My Activity',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined),
-            activeIcon: Icon(Icons.event_note),
-            label: 'My Events',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
+            ),
+      ],
     );
   }
 }

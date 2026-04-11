@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'signup_page.dart';
-import '../home/home_page.dart';
+import '../home/home_tab.dart';
+import '../../services/session_service.dart';
+import '../main/main_navigation_page.dart';
 
 //stateful because it changes as the user interacts with it (password hidden/visible, loading, text field, form validation)
 class LoginPage extends StatefulWidget {
@@ -91,10 +93,16 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
+      await SessionService().saveSession(
+        token: token,
+        userId: userId,
+        email: email,
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomePage(
+          builder: (_) => MainNavigationPage(
             token: token,
             userId: userId,
             email: email,
