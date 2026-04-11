@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'signup_page.dart';
-import '../home/home_tab.dart';
+import '../main/tab/home_tab.dart';
 import '../../services/session_service.dart';
 import '../main/main_navigation_page.dart';
 
@@ -13,15 +13,16 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
+// The State class contains the mutable data and logic for LoginPage.
 class _LoginPageState extends State<LoginPage> {
-  //form
+  //GlobalKey used to access the Form's internal state (call to validate())
   final _formKey = GlobalKey<FormState>();
 
   //user typed inputs
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  //Object that calls the backend for auth
+  //Object that calls the backend for auth operations
   final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;

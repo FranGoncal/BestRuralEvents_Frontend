@@ -5,6 +5,7 @@ class SessionService {
   static const _userIdKey = 'userId';
   static const _emailKey = 'email';
 
+  //stores session data locally (SharedPreferences)
   Future<void> saveSession({
     required String token,
     required String userId,
@@ -17,6 +18,7 @@ class SessionService {
     await prefs.setString(_emailKey, email);
   }
 
+  //gest locally stored session (SharedPreferences)
   Future<Map<String, String>?> getSession() async {
     final prefs = await SharedPreferences.getInstance();
 

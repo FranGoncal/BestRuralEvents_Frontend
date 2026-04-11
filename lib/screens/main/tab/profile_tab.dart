@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:best_rural_events_frontend/screens/auth/login_page.dart';
 import 'package:best_rural_events_frontend/services/session_service.dart';
 
-class ProfilePage extends StatelessWidget {
+// Tab used in the main page for profile
+class ProfileTab extends StatelessWidget {
   final String token;
   final String userId;
   final String email;
 
-  const ProfilePage({
+  const ProfileTab({
     super.key,
     required this.token,
     required this.userId,
@@ -193,6 +194,7 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
+// tiles used to display user profile option list
 class _ProfileOptionTile extends StatelessWidget {
   final IconData icon;
   final String title;

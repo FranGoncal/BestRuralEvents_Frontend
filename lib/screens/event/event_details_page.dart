@@ -6,6 +6,7 @@ import '../../widgets/expandable_text.dart';
 
 
 class EventDetailsPage extends StatefulWidget {
+  // Data passed INTO this page from previous screen
   final Event event;
   final String token;
 
@@ -20,25 +21,30 @@ class EventDetailsPage extends StatefulWidget {
 }
 
 class _EventDetailsPageState extends State<EventDetailsPage> {
+  // Service responsible for API calls related to events to the backend
   final EventService _eventService = EventService();
 
-  bool _isFavoriteLoading = true;
-  bool _isFavorite = false;
+  bool _isFavoriteLoading = true; // loading spinner for favorite
+  bool _isFavorite = false; // actual favorite state
 
   bool _isReviewsLoading = true;
   List<EventReview> _reviews = [];
 
+  // Error handling
   String? _favoriteError;
   String? _reviewsError;
 
+  // Prevents multiple clicks while request is running
   bool _isTogglingFavorite = false;
 
+  //runs once the page opens
   @override
   void initState() {
     super.initState();
     _loadExtraData();
   }
 
+  //used to load data from different resources
   Future<void> _loadExtraData() async {
     await _loadFavorite();
     await _loadReviews();
@@ -90,15 +96,18 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
+  // toggle this event fav (calls event service which calls the backend)
   Future<void> _toggleFavorite() async {
-    if (_isTogglingFavorite) return;
 
+    //preventing multiple requests
+    if (_isTogglingFavorite) return;
     setState(() {
       _isTogglingFavorite = true;
     });
 
     bool success = false;
 
+    // If already fav, remove, else add
     if (_isFavorite) {
       success = await _eventService.removeFavorite(
         token: widget.token,
@@ -111,8 +120,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       );
     }
 
+    // async safety
     if (!mounted) return;
 
+    //update screen depending on result
     if (success) {
       setState(() {
         _isFavorite = !_isFavorite;
@@ -132,6 +143,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
+  //Converts DateTime into readable string
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
@@ -139,11 +151,13 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     return '$day/$month/$year';
   }
 
+  // if price is 0 then its Free, else it is a Euro char + value
   String _formatPrice(double price) {
     if (price == 0) return 'Free';
     return '€${price.toStringAsFixed(2)}';
   }
 
+  //builds UI rating stars
   Widget _buildStars(double rating) {
     final fullStars = rating.floor();
     final hasHalf = (rating - fullStars) >= 0.5;
@@ -151,17 +165,21 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(5, (index) {
+        //if its less than the total rating, use full star icon
         if (index < fullStars) {
           return const Icon(Icons.star, size: 18, color: Colors.amber);
         }
+        //if it is the last start and there is a half star, half star
         if (index == fullStars && hasHalf) {
           return const Icon(Icons.star_half, size: 18, color: Colors.amber);
         }
+        //else empty star
         return const Icon(Icons.star_border, size: 18, color: Colors.amber);
       }),
     );
   }
 
+  // page structure
   @override
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF2E7D32);
@@ -183,6 +201,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               width: double.infinity,
               height: 240,
               fit: BoxFit.cover,
+              //fallback in case there is no img
               errorBuilder: (_, __, ___) {
                 return Container(
                   width: double.infinity,
@@ -401,6 +420,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   }
 }
 
+//widget used only in this page, for single review representation
 class _ReviewCard extends StatelessWidget {
   final EventReview review;
 

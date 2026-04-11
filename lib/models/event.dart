@@ -1,4 +1,6 @@
+// This class represents a single "Event" object (structured way to represent an Event)
 class Event {
+
   final int id;
   final String title;
   final String location;
@@ -7,8 +9,10 @@ class Event {
   final double price;
   final double averageRating;
   final int totalReviews;
+  // optional
   final String? description;
 
+  // Constructor used to create a new Event object manually
   Event({
     required this.id,
     required this.title,
@@ -21,6 +25,7 @@ class Event {
     this.description,
   });
 
+  // Factory method is used to create an Event from JSON
   factory Event.fromJson(Map<String, dynamic> json) {
     return Event(
       id: json['id'] as int,

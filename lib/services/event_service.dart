@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/event.dart';
 import '../models/event_review.dart';
 
-class HomeEventsResult {
+// Custom object used to return get events operation results in a clean structured way.
+class EventsResult {
   final bool success;
   final String message;
   final List<Event> events;
@@ -15,7 +17,7 @@ class HomeEventsResult {
   final String? lastUpdated;
   final bool loadedFromCache;
 
-  HomeEventsResult({
+  EventsResult({
     required this.success,
     required this.message,
     required this.events,
@@ -25,6 +27,7 @@ class HomeEventsResult {
   });
 }
 
+// Custom object used to return meta operation results in a clean structured way.
 class MainPageMetaResult {
   final bool success;
   final String message;
@@ -40,7 +43,8 @@ class MainPageMetaResult {
 }
 
 class EventService {
-  static const String baseUrl = 'http://192.168.1.68:8080';
+  //TODO
+  static const String baseUrl = 'http://localhost:8080';
 
   static List<Event>? _cachedEvents;
   static String? _cachedLastUpdated;
@@ -233,7 +237,7 @@ class EventService {
     }
   }
 
-  Future<HomeEventsResult> getMainPageEvents({
+  Future<EventsResult> getMainPageEvents({
     String? token,
   }) async {
     final url = Uri.parse('$baseUrl/events/main-page');
@@ -255,7 +259,7 @@ class EventService {
       try {
         decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
       } catch (_) {
-        return HomeEventsResult(
+        return EventsResult(
           success: false,
           message: 'Backend responded, but body is not valid JSON.',
           events: [],
@@ -268,7 +272,7 @@ class EventService {
         final eventsJson = decodedBody['events'];
 
         if (lastUpdated == null || eventsJson is! List) {
-          return HomeEventsResult(
+          return EventsResult(
             success: false,
             message:
             'Backend responded 2xx, but JSON is not in expected format. Expected: lastUpdated + events.',
@@ -284,7 +288,7 @@ class EventService {
         _cachedEvents = events;
         _cachedLastUpdated = lastUpdated;
 
-        return HomeEventsResult(
+        return EventsResult(
           success: true,
           message: 'Main page events loaded successfully.',
           events: events,
@@ -294,26 +298,26 @@ class EventService {
         );
       }
 
-      return HomeEventsResult(
+      return EventsResult(
         success: false,
         message: 'Backend responded with error status ${response.statusCode}.',
         events: [],
         statusCode: response.statusCode,
       );
     } on SocketException {
-      return HomeEventsResult(
+      return EventsResult(
         success: false,
         message: 'No response. Could not connect to backend.',
         events: [],
       );
     } on TimeoutException {
-      return HomeEventsResult(
+      return EventsResult(
         success: false,
         message: 'No response. Request timed out.',
         events: [],
       );
     } catch (e) {
-      return HomeEventsResult(
+      return EventsResult(
         success: false,
         message: 'Unexpected error: $e',
         events: [],
@@ -321,7 +325,7 @@ class EventService {
     }
   }
 
-  Future<HomeEventsResult> loadMainPageEventsSmart({
+  Future<EventsResult> loadMainPageEventsSmart({
     String? token,
   }) async {
     if (_cachedEvents == null || _cachedLastUpdated == null) {
@@ -330,8 +334,11 @@ class EventService {
 
     final metaResult = await checkMainPageEventsMeta(token: token);
 
+    //debugPrint('CACHED lastUpdated: $_cachedLastUpdated');
+    //debugPrint('META   lastUpdated: ${metaResult.lastUpdated}');
+
     if (!metaResult.success) {
-      return HomeEventsResult(
+      return EventsResult(
         success: true,
         message: 'Using cached events. Meta check failed.',
         events: _cachedEvents!,
@@ -341,7 +348,7 @@ class EventService {
     }
 
     if (metaResult.lastUpdated == _cachedLastUpdated) {
-      return HomeEventsResult(
+      return EventsResult(
         success: true,
         message: 'Using cached events. Backend list is unchanged.',
         events: _cachedEvents!,

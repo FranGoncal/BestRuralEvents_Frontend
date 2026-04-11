@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:http/http.dart' as http;
 
-//Custom result object (4 login and signup)
+// Custom object used to return auth operation results in a clean structured way.
 class AuthResult {
   final bool success;
   final String message;
@@ -24,10 +23,12 @@ class AuthService {
   // Android emulator -> http://10.0.2.2:8080
   // Mockoon -> http://localhost:8080
   // Real device -> http://PC_IP:8080
-  static const String baseUrl = 'http://192.168.1.68:8080';
+  // TODO
+  static const String baseUrl = 'http://localhost:8080';
 
   // Returns result async way -> Future
-  // func responsible for the
+  // func responsible for the login
+  // returns a AuthResult
   Future<AuthResult> login({
     required String email,
     required String password,
@@ -35,7 +36,7 @@ class AuthService {
     final url = Uri.parse('$baseUrl/auth/login');
 
     try {
-      //request login post -> leva um body em json
+      //request login post -> takes a json body
       final response = await http
           .post(
         url,
@@ -219,7 +220,4 @@ class AuthService {
       );
     }
   }
-
-
-
 }

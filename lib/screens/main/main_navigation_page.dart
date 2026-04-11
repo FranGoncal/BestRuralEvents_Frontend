@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:best_rural_events_frontend/screens/home/home_tab.dart';
-import 'package:best_rural_events_frontend/screens/home/profile_page.dart';
+import 'package:best_rural_events_frontend/screens/main/tab/home_tab.dart';
+import 'package:best_rural_events_frontend/screens/main/tab/profile_tab.dart';
 
+// The screen the user sees after login
+// this screen manages tab navigation, not page/screen navigation
 class MainNavigationPage extends StatefulWidget {
   final String token;
   final String userId;
@@ -19,6 +21,7 @@ class MainNavigationPage extends StatefulWidget {
 }
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
+  //defines the selected tab
   int _selectedIndex = 0;
 
   void _showMessage(String message, {Color? backgroundColor}) {
@@ -31,6 +34,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     );
   }
 
+  //method for the logic in the top bar display depending on the tab
   PreferredSizeWidget _buildAppBar() {
     const primaryGreen = Color(0xFF2E7D32);
 
@@ -76,6 +80,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     }
   }
 
+  //method for the texts in the bottom tab select options
   String _titleForIndex(int index) {
     switch (index) {
       case 0:
@@ -93,6 +98,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     }
   }
 
+  // method for the build of the different tabs actual body (using tab widgets )
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0:
@@ -108,7 +114,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       case 3:
         return const Center(child: Text('My Events page coming next'));
       case 4:
-        return ProfilePage(
+        return ProfileTab(
           token: widget.token,
           userId: widget.userId,
           email: widget.email,
@@ -118,6 +124,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     }
   }
 
+  //Actual build method of the MainNavPage
   @override
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF2E7D32);
