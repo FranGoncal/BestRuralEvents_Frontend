@@ -186,6 +186,85 @@ class EventService {
     }
   }
 
+  Future<EventsResult> getFavoriteEvents({
+    required String token,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/favourites');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic> decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return EventsResult(
+          success: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          events: [],
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final eventsJson = decodedBody['events'];
+
+        if (eventsJson is! List) {
+          return EventsResult(
+            success: false,
+            message: 'Backend responded 2xx, but JSON is not in expected format. Expected: events.',
+            events: [],
+            statusCode: response.statusCode,
+          );
+        }
+
+        final events = eventsJson
+            .map((item) => Event.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return EventsResult(
+          success: true,
+          message: decodedBody['message']?.toString() ?? 'Favorite events loaded successfully.',
+          events: events,
+          statusCode: response.statusCode,
+        );
+      }
+
+      return EventsResult(
+        success: false,
+        message: decodedBody['message']?.toString() ??
+            'Backend responded with error status ${response.statusCode}.',
+        events: [],
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return EventsResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+        events: [],
+      );
+    } on TimeoutException {
+      return EventsResult(
+        success: false,
+        message: 'No response. Request timed out.',
+        events: [],
+      );
+    } catch (e) {
+      return EventsResult(
+        success: false,
+        message: 'Unexpected error: $e',
+        events: [],
+      );
+    }
+  }
+
   Future<MainPageMetaResult> checkMainPageEventsMeta({
     String? token,
   }) async {

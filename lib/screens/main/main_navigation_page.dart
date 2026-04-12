@@ -114,7 +114,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           token: widget.token,
         );
       case 2:
-        return const MyActivityPage();
+        return MyActivityPage(token: widget.token);
       case 3:
         return const Center(child: Text('My Events page coming next'));
       case 4:

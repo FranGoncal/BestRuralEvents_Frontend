@@ -4,7 +4,12 @@ import 'my_activities/favorites_tab.dart';
 import 'my_activities/reviews_tab.dart';
 
 class MyActivityPage extends StatelessWidget {
-  const MyActivityPage({super.key});
+  final String token;
+
+  const MyActivityPage({
+    super.key,
+    required this.token,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,17 +25,17 @@ class MyActivityPage extends StatelessWidget {
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(16), // less circular
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: TabBar(
               indicator: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12), // smaller radius
+                borderRadius: BorderRadius.circular(12),
               ),
+              indicatorSize: TabBarIndicatorSize.tab,
               labelColor: primaryGreen,
               unselectedLabelColor: Colors.grey,
-              indicatorSize: TabBarIndicatorSize.tab, // makes it fill tab width
               dividerColor: Colors.transparent,
               overlayColor: WidgetStateProperty.all(Colors.transparent),
               labelStyle: const TextStyle(fontWeight: FontWeight.w600),
@@ -42,12 +47,12 @@ class MyActivityPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Expanded(
+          Expanded(
             child: TabBarView(
               children: [
-                TicketsTab(),
-                FavoritesTab(),
-                ReviewsTab(),
+                const TicketsTab(),
+                FavoritesTab(token: token),
+                const ReviewsTab(),
               ],
             ),
           ),
