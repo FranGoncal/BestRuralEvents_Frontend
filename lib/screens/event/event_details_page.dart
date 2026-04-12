@@ -3,7 +3,7 @@ import '../../models/event.dart';
 import '../../models/event_review.dart';
 import '../../services/event_service.dart';
 import '../../widgets/expandable_text.dart';
-
+import '../ticket/buy_ticket_page.dart';
 
 class EventDetailsPage extends StatefulWidget {
   // Data passed INTO this page from previous screen
@@ -360,12 +360,27 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Booking flow comes next'),
+                      onPressed: () async {
+                        final bookingDone = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BuyTicketPage(
+                              event: widget.event,
+                              token: widget.token,
+                            ),
                           ),
                         );
+
+                        if (!mounted) return;
+
+                        if (bookingDone == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Booking completed successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryGreen,
