@@ -5,10 +5,12 @@ import 'my_activities/reviews_tab.dart';
 
 class MyActivityPage extends StatelessWidget {
   final String token;
+  final String userId;
 
   const MyActivityPage({
     super.key,
     required this.token,
+    required this.userId,
   });
 
   @override
@@ -50,7 +52,10 @@ class MyActivityPage extends StatelessWidget {
           Expanded(
             child: TabBarView(
               children: [
-                const TicketsTab(),
+                TicketsTab(
+                  token: token,
+                  userId: userId,
+                ),
                 FavoritesTab(token: token),
                 const ReviewsTab(),
               ],
