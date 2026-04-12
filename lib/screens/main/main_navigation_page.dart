@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:best_rural_events_frontend/screens/main/tab/home_tab.dart';
 import 'package:best_rural_events_frontend/screens/main/tab/profile_tab.dart';
+import 'package:best_rural_events_frontend/screens/main/tab/search_tab.dart';
 
 // The screen the user sees after login
 // this screen manages tab navigation, not page/screen navigation
@@ -108,7 +109,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           email: widget.email,
         );
       case 1:
-        return const Center(child: Text('Search page coming next'));
+        return SearchTab(
+          token: widget.token,
+        );
       case 2:
         return const Center(child: Text('My Activity page coming next'));
       case 3:
@@ -139,9 +142,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             _selectedIndex = index;
           });
 
-          if (index == 1) {
-            _showMessage('Search page coming next');
-          } else if (index == 2) {
+          if (index == 2) {
             _showMessage('My Activity page coming next');
           } else if (index == 3) {
             _showMessage('My Events page coming next');

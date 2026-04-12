@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/event.dart';
 import '../screens/event/event_details_page.dart';
 
+
 class EventCard extends StatelessWidget {
   final Event event;
   final String formattedDate;

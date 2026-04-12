@@ -41,8 +41,30 @@ class MainPageMetaResult {
   });
 }
 
+
+class SearchEventsResult {
+  final bool success;
+  final String message;
+  final List<Event> events;
+  final int page;
+  final int pageSize;
+  final int total;
+  final bool hasMore;
+  final int? statusCode;
+
+  SearchEventsResult({
+    required this.success,
+    required this.message,
+    required this.events,
+    required this.page,
+    required this.pageSize,
+    required this.total,
+    required this.hasMore,
+    this.statusCode,
+  });
+}
+
 class EventService {
-  //TODO
   static String get baseUrl => AppConfig.baseUrl;
 
   static List<Event>? _cachedEvents;
@@ -357,5 +379,151 @@ class EventService {
     }
 
     return getMainPageEvents(token: token);
+  }
+
+
+  Future<SearchEventsResult> searchEvents({
+    required String token,
+    String? query,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+    String? activityType,
+    DateTime? startDate,
+    DateTime? endDate,
+    required int page,
+    int pageSize = 10,
+  }) async {
+    final queryParameters = <String, String>{
+      'page': page.toString(),
+      'pageSize': pageSize.toString(),
+    };
+
+    if (query != null && query.trim().isNotEmpty) {
+      queryParameters['query'] = query.trim();
+    }
+    if (minPrice != null) {
+      queryParameters['minPrice'] = minPrice.toString();
+    }
+    if (maxPrice != null) {
+      queryParameters['maxPrice'] = maxPrice.toString();
+    }
+    if (minRating != null) {
+      queryParameters['minRating'] = minRating.toString();
+    }
+    if (activityType != null && activityType.trim().isNotEmpty) {
+      queryParameters['activityType'] = activityType.trim();
+    }
+    if (startDate != null) {
+      queryParameters['startDate'] = startDate.toIso8601String();
+    }
+    if (endDate != null) {
+      queryParameters['endDate'] = endDate.toIso8601String();
+    }
+
+    final url = Uri.parse('$baseUrl/events/search')
+        .replace(queryParameters: queryParameters);
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic> decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return SearchEventsResult(
+          success: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          events: [],
+          page: page,
+          pageSize: pageSize,
+          total: 0,
+          hasMore: false,
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final eventsJson = decodedBody['events'];
+        final pagination = decodedBody['pagination'];
+
+        if (eventsJson is! List || pagination is! Map<String, dynamic>) {
+          return SearchEventsResult(
+            success: false,
+            message: 'JSON format invalid. Expected: events + pagination.',
+            events: [],
+            page: page,
+            pageSize: pageSize,
+            total: 0,
+            hasMore: false,
+            statusCode: response.statusCode,
+          );
+        }
+
+        final events = eventsJson
+            .map((item) => Event.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return SearchEventsResult(
+          success: true,
+          message: decodedBody['message']?.toString() ?? 'Search completed.',
+          events: events,
+          page: (pagination['page'] as int?) ?? page,
+          pageSize: (pagination['pageSize'] as int?) ?? pageSize,
+          total: (pagination['total'] as int?) ?? events.length,
+          hasMore: (pagination['hasMore'] as bool?) ?? false,
+          statusCode: response.statusCode,
+        );
+      }
+
+      return SearchEventsResult(
+        success: false,
+        message: decodedBody['message']?.toString() ??
+            'Backend responded with error status ${response.statusCode}.',
+        events: [],
+        page: page,
+        pageSize: pageSize,
+        total: 0,
+        hasMore: false,
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return SearchEventsResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+        events: [],
+        page: page,
+        pageSize: pageSize,
+        total: 0,
+        hasMore: false,
+      );
+    } on TimeoutException {
+      return SearchEventsResult(
+        success: false,
+        message: 'No response. Request timed out.',
+        events: [],
+        page: page,
+        pageSize: pageSize,
+        total: 0,
+        hasMore: false,
+      );
+    } catch (e) {
+      return SearchEventsResult(
+        success: false,
+        message: 'Unexpected error: $e',
+        events: [],
+        page: page,
+        pageSize: pageSize,
+        total: 0,
+        hasMore: false,
+      );
+    }
   }
 }
