@@ -1,3 +1,7 @@
+import 'package:best_rural_events_frontend/screens/main/tab/profile/change_password_page.dart';
+import 'package:best_rural_events_frontend/screens/main/tab/profile/edit_profile_page.dart';
+import 'package:best_rural_events_frontend/screens/main/tab/profile/faq_page.dart';
+import 'package:best_rural_events_frontend/screens/main/tab/profile/help_support_page.dart';
 import 'package:flutter/material.dart';
 import 'package:best_rural_events_frontend/screens/auth/login_page.dart';
 import 'package:best_rural_events_frontend/services/session_service.dart';
@@ -173,13 +177,13 @@ class ProfileTab extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
+              /*const SizedBox(height: 6),
               Text(
                 'User ID: $userId',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey[600],
                 ),
-              ),
+              ),*/
             ],
           ),
         ),
@@ -193,6 +197,32 @@ class ProfileTab extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ProfileOptionTile(
+          icon: Icons.person_outline,
+          title: 'Edit profile',
+          subtitle: 'Update your personal information',
+          onTap: () async {
+            final updated = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => EditProfilePage(
+                  token: token,
+                  userId: userId,
+                ),
+              ),
+            );
+
+            if (!context.mounted) return;
+
+            if (updated == true) {
+              _showMessage(
+                context,
+                'Profile updated successfully',
+                backgroundColor: Colors.green,
+              );
+            }
+          },
+        ),
+        _ProfileOptionTile(
           icon: Icons.notifications_none,
           title: 'Notifications',
           subtitle: 'Allow this app to receive notifications',
@@ -205,7 +235,38 @@ class ProfileTab extends StatelessWidget {
           title: 'Privacy and security',
           subtitle: 'Password and account security',
           onTap: () async {
-            _showMessage(context, 'Privacy and security page comes next');
+            final updated = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChangePasswordPage(
+                  token: token,
+                  userId: userId,
+                ),
+              ),
+            );
+
+            if (!context.mounted) return;
+
+            if (updated == true) {
+              _showMessage(
+                context,
+                'Password updated successfully',
+                backgroundColor: Colors.green,
+              );
+            }
+          },
+        ),
+        _ProfileOptionTile(
+          icon: Icons.quiz_outlined,
+          title: 'FAQ',
+          subtitle: 'Frequently asked questions',
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FaqPage(token: token),
+              ),
+            );
           },
         ),
         _ProfileOptionTile(
@@ -213,7 +274,16 @@ class ProfileTab extends StatelessWidget {
           title: 'Help and support',
           subtitle: 'Get help using the app',
           onTap: () async {
-            _showMessage(context, 'Help and support page comes next');
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HelpSupportPage(
+                  token: token,
+                  userId: userId,
+                  email: email,
+                ),
+              ),
+            );
           },
         ),
         const SizedBox(height: 28),
@@ -246,14 +316,14 @@ class ProfileTab extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        /*const SizedBox(height: 16),
         Text(
           'Token available: ${token.isNotEmpty ? "yes" : "no"}',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Colors.grey[500],
           ),
-        ),
+        ),*/
       ],
     );
   }
