@@ -28,15 +28,15 @@ class Event {
   // Factory method is used to create an Event from JSON
   factory Event.fromJson(Map<String, dynamic> json) {
     return Event(
-      id: json['id'] as int,
-      title: json['title'] as String,
-      location: json['location'] as String,
-      date: DateTime.parse(json['date'] as String),
-      imageUrl: json['imageUrl'] as String,
-      price: (json['price'] as num).toDouble(),
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      title: json['title']?.toString() ?? 'Untitled event',
+      location: json['location']?.toString() ?? 'Location unavailable',
+      date: DateTime.tryParse(json['date']?.toString() ?? '') ?? DateTime.now(),
+      imageUrl: json['imageUrl']?.toString() ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
-      totalReviews: json['totalReviews'] as int? ?? 0,
-      description: json['description'] as String?,
+      totalReviews: (json['totalReviews'] as num?)?.toInt() ?? 0,
+      description: json['description']?.toString(),
     );
   }
 }

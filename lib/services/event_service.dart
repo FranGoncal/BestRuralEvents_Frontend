@@ -7,6 +7,21 @@ import '../config/app_config.dart';
 import '../models/event.dart';
 import '../models/event_review.dart';
 
+
+class UserCreatedEventsResult {
+  final bool success;
+  final String message;
+  final List<Event> events;
+  final int? statusCode;
+
+  UserCreatedEventsResult({
+    required this.success,
+    required this.message,
+    required this.events,
+    this.statusCode,
+  });
+}
+
 // Custom object used to return get events operation results in a clean structured way.
 class EventsResult {
   final bool success;
@@ -605,4 +620,86 @@ class EventService {
       );
     }
   }
+
+  Future<UserCreatedEventsResult> getUserCreatedEvents({
+    required String token,
+    required String userId,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/user/$userId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic> decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return UserCreatedEventsResult(
+          success: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          events: [],
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final eventsJson = decodedBody['events'];
+
+        if (eventsJson is! List) {
+          return UserCreatedEventsResult(
+            success: false,
+            message: 'Backend responded 2xx, but JSON is not in expected format. Expected: events.',
+            events: [],
+            statusCode: response.statusCode,
+          );
+        }
+
+        final events = eventsJson
+            .map((item) => Event.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return UserCreatedEventsResult(
+          success: true,
+          message: decodedBody['message']?.toString() ??
+              'User created events loaded successfully.',
+          events: events,
+          statusCode: response.statusCode,
+        );
+      }
+
+      return UserCreatedEventsResult(
+        success: false,
+        message: decodedBody['message']?.toString() ??
+            'Backend responded with error status ${response.statusCode}.',
+        events: [],
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return UserCreatedEventsResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+        events: [],
+      );
+    } on TimeoutException {
+      return UserCreatedEventsResult(
+        success: false,
+        message: 'No response. Request timed out.',
+        events: [],
+      );
+    } catch (e) {
+      return UserCreatedEventsResult(
+        success: false,
+        message: 'Unexpected error: $e',
+        events: [],
+      );
+    }
+  }
+
 }

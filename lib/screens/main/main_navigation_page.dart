@@ -1,3 +1,4 @@
+import 'package:best_rural_events_frontend/screens/main/tab/my_events_tab.dart';
 import 'package:flutter/material.dart';
 import 'package:best_rural_events_frontend/screens/main/tab/home_tab.dart';
 import 'package:best_rural_events_frontend/screens/main/tab/profile_tab.dart';
@@ -119,7 +120,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           userId: widget.userId,
         );
       case 3:
-        return const Center(child: Text('My Events page coming next'));
+        return MyEventsTab(
+          token: widget.token,
+          userId: widget.userId,
+        );
       case 4:
         return ProfileTab(
           token: widget.token,
