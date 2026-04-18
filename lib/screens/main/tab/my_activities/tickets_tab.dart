@@ -1,8 +1,8 @@
 import 'package:best_rural_events_frontend/services/ticket_service.dart';
 import 'package:flutter/material.dart';
 import '../../../../models/ticket.dart';
+import '../../../../widgets/qr_code_dialog.dart';
 import '../../../event/event_details_page.dart';
-import '../../../../services/event_service.dart';
 
 class TicketsTab extends StatefulWidget {
   final String token;
@@ -285,8 +285,37 @@ class _TicketsTabState extends State<TicketsTab> {
     }
   }
 
-  void _viewTicket(Ticket ticket) {
-    _showMessage('View ticket page coming next');
+  Future<void> _viewTicket(Ticket ticket) async {
+    _showMessage('Validating ticket...');
+
+    final result = await _ticketService.validateTicketForQr(
+      token: widget.token,
+      ticketId: ticket.id,
+    );
+
+    if (!mounted) return;
+
+    if (!result.success) {
+      _showMessage(result.message, backgroundColor: Colors.red);
+      return;
+    }
+
+    if (!result.valid || result.qrToken == null || result.qrToken!.isEmpty) {
+      _showMessage(
+        result.message.isNotEmpty ? result.message : 'This ticket is not valid.',
+        backgroundColor: Colors.red,
+      );
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (_) => TicketQrDialog(
+        ticket: ticket,
+        qrToken: result.qrToken!,
+        formattedPurchaseDate: _formatDate(ticket.purchaseDate),
+      ),
+    );
   }
 
   @override

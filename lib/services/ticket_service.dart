@@ -35,6 +35,28 @@ class TicketsResult {
   });
 }
 
+class TicketValidationResult {
+  final bool success;
+  final bool valid;
+  final String message;
+  final String? ticketId;
+  final String? userId;
+  final String? eventId;
+  final String? qrToken;
+  final int? statusCode;
+
+  TicketValidationResult({
+    required this.success,
+    required this.valid,
+    required this.message,
+    this.ticketId,
+    this.userId,
+    this.eventId,
+    this.qrToken,
+    this.statusCode,
+  });
+}
+
 class TicketService {
   static String get baseUrl => AppConfig.baseUrl;
 
@@ -147,7 +169,8 @@ class TicketService {
         if (ticketsJson is! List) {
           return TicketsResult(
             success: false,
-            message: 'Backend responded 2xx, but JSON is not in expected format. Expected: tickets.',
+            message:
+            'Backend responded 2xx, but JSON is not in expected format. Expected: tickets.',
             tickets: [],
             statusCode: response.statusCode,
           );
@@ -159,8 +182,8 @@ class TicketService {
 
         return TicketsResult(
           success: true,
-          message: decodedBody['message']?.toString() ??
-              'Tickets loaded successfully.',
+          message:
+          decodedBody['message']?.toString() ?? 'Tickets loaded successfully.',
           tickets: tickets,
           statusCode: response.statusCode,
         );
@@ -216,6 +239,78 @@ class TicketService {
       return false;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<TicketValidationResult> validateTicketForQr({
+    required String token,
+    required String ticketId,
+  }) async {
+    final url = Uri.parse('$baseUrl/tickets/$ticketId/valid');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic> decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return TicketValidationResult(
+          success: false,
+          valid: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return TicketValidationResult(
+          success: true,
+          valid: decodedBody['valid'] as bool? ?? false,
+          message: decodedBody['message']?.toString() ??
+              ((decodedBody['valid'] as bool? ?? false)
+                  ? 'Ticket validated successfully.'
+                  : 'Ticket is not valid.'),
+          ticketId: decodedBody['ticketId']?.toString(),
+          userId: decodedBody['userId']?.toString(),
+          eventId: decodedBody['eventId']?.toString(),
+          qrToken: decodedBody['qrToken']?.toString(),
+          statusCode: response.statusCode,
+        );
+      }
+
+      return TicketValidationResult(
+        success: false,
+        valid: false,
+        message: decodedBody['message']?.toString() ??
+            'Backend responded with error status ${response.statusCode}.',
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return TicketValidationResult(
+        success: false,
+        valid: false,
+        message: 'No response. Could not connect to backend.',
+      );
+    } on TimeoutException {
+      return TicketValidationResult(
+        success: false,
+        valid: false,
+        message: 'No response. Request timed out.',
+      );
+    } catch (e) {
+      return TicketValidationResult(
+        success: false,
+        valid: false,
+        message: 'Unexpected error: $e',
+      );
     }
   }
 }

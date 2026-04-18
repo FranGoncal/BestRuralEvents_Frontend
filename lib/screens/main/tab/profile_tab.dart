@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:best_rural_events_frontend/screens/auth/login_page.dart';
 import 'package:best_rural_events_frontend/services/session_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Tab used in the main page for profile
 class ProfileTab extends StatelessWidget {
@@ -15,7 +17,11 @@ class ProfileTab extends StatelessWidget {
     required this.email,
   });
 
-  void _showMessage(BuildContext context, String message, {Color? backgroundColor}) {
+  void _showMessage(
+      BuildContext context,
+      String message, {
+        Color? backgroundColor,
+      }) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -23,6 +29,98 @@ class ProfileTab extends StatelessWidget {
         backgroundColor: backgroundColor,
       ),
     );
+  }
+
+  Future<void> _showNotificationSettingsDialog(
+      BuildContext context, {
+        required bool enabled,
+      }) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(enabled ? 'Notifications are on' : 'Notifications are off'),
+          content: Text(
+            enabled
+                ? 'Notifications are currently enabled for this app. To turn them off, open your device app settings.'
+                : 'Notifications are currently disabled for this app. To turn them on, open your device app settings.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await openAppSettings();
+              },
+              child: const Text('Open settings'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> requestNotificationPermission(BuildContext context) async {
+    final messaging = FirebaseMessaging.instance;
+    final currentSettings = await messaging.getNotificationSettings();
+
+    if (!context.mounted) return;
+
+    switch (currentSettings.authorizationStatus) {
+      case AuthorizationStatus.authorized:
+        await _showNotificationSettingsDialog(context, enabled: true);
+        return;
+
+      case AuthorizationStatus.denied:
+        await _showNotificationSettingsDialog(context, enabled: false);
+        return;
+
+      case AuthorizationStatus.provisional:
+        await _showNotificationSettingsDialog(context, enabled: true);
+        return;
+
+      case AuthorizationStatus.notDetermined:
+        final newSettings = await messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+
+        if (!context.mounted) return;
+
+        switch (newSettings.authorizationStatus) {
+          case AuthorizationStatus.authorized:
+            _showMessage(
+              context,
+              'Notifications enabled',
+              backgroundColor: Colors.green,
+            );
+            break;
+          case AuthorizationStatus.provisional:
+            _showMessage(
+              context,
+              'Provisional notification permission granted',
+              backgroundColor: Colors.orange,
+            );
+            break;
+          case AuthorizationStatus.denied:
+            await _showNotificationSettingsDialog(context, enabled: false);
+            break;
+          case AuthorizationStatus.notDetermined:
+            _showMessage(
+              context,
+              'Notification permission not decided yet',
+              backgroundColor: Colors.grey,
+            );
+            break;
+        }
+        return;
+    }
   }
 
   @override
@@ -95,51 +193,18 @@ class ProfileTab extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _ProfileOptionTile(
-          icon: Icons.person_outline,
-          title: 'Edit profile',
-          subtitle: 'Update your personal information',
-          onTap: () {
-            _showMessage(context, 'Edit profile comes next');
-          },
-        ),
-        _ProfileOptionTile(
-          icon: Icons.favorite_border,
-          title: 'Favorites',
-          subtitle: 'See your favorite events',
-          onTap: () {
-            _showMessage(context, 'Favorites page comes next');
-          },
-        ),
-        _ProfileOptionTile(
-          icon: Icons.confirmation_num_outlined,
-          title: 'My bookings',
-          subtitle: 'Check your booked events',
-          onTap: () {
-            _showMessage(context, 'My bookings page comes next');
-          },
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Preferences',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: primaryGreen,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _ProfileOptionTile(
           icon: Icons.notifications_none,
           title: 'Notifications',
-          subtitle: 'Manage alerts and reminders',
-          onTap: () {
-            _showMessage(context, 'Notifications settings come next');
+          subtitle: 'Allow this app to receive notifications',
+          onTap: () async {
+            await requestNotificationPermission(context);
           },
         ),
         _ProfileOptionTile(
           icon: Icons.lock_outline,
           title: 'Privacy and security',
           subtitle: 'Password and account security',
-          onTap: () {
+          onTap: () async {
             _showMessage(context, 'Privacy and security page comes next');
           },
         ),
@@ -147,7 +212,7 @@ class ProfileTab extends StatelessWidget {
           icon: Icons.help_outline,
           title: 'Help and support',
           subtitle: 'Get help using the app',
-          onTap: () {
+          onTap: () async {
             _showMessage(context, 'Help and support page comes next');
           },
         ),
@@ -199,7 +264,7 @@ class _ProfileOptionTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final Future<void> Function() onTap;
 
   const _ProfileOptionTile({
     required this.icon,
@@ -221,7 +286,9 @@ class _ProfileOptionTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
-        onTap: onTap,
+        onTap: () async {
+          await onTap();
+        },
         leading: CircleAvatar(
           backgroundColor: const Color(0xFFE8F5E9),
           child: Icon(icon, color: primaryGreen),
