@@ -6,7 +6,40 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/event.dart';
 import '../models/event_review.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
+
+// used to create events
+class CreateEventResult {
+  final bool success;
+  final String message;
+  final Event? event;
+  final int? statusCode;
+
+  CreateEventResult({
+    required this.success,
+    required this.message,
+    this.event,
+    this.statusCode,
+  });
+}
+
+// used to update events
+class UpdateEventResult {
+  final bool success;
+  final String message;
+  final Event? event;
+  final int? statusCode;
+
+  UpdateEventResult({
+    required this.success,
+    required this.message,
+    this.event,
+    this.statusCode,
+  });
+}
 
 class UserCreatedEventsResult {
   final bool success;
@@ -698,6 +731,203 @@ class EventService {
         success: false,
         message: 'Unexpected error: $e',
         events: [],
+      );
+    }
+  }
+
+
+  Future<CreateEventResult> createEvent({
+    required String token,
+    required String title,
+    required String location,
+    required DateTime date,
+    required double price,
+    String? description,
+    XFile? imageXFile,
+    Uint8List? imageBytes,
+  }) async {
+    final url = Uri.parse('$baseUrl/events');
+
+    try {
+      final request = http.MultipartRequest('POST', url);
+
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+
+      request.fields['title'] = title.trim();
+      request.fields['location'] = location.trim();
+      request.fields['date'] = date.toIso8601String();
+      request.fields['price'] = price.toString();
+
+      if (description != null && description.trim().isNotEmpty) {
+        request.fields['description'] = description.trim();
+      }
+
+      if (imageXFile != null) {
+        if (kIsWeb) {
+          final bytes = imageBytes ?? await imageXFile.readAsBytes();
+
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'image',
+              bytes,
+              filename: imageXFile.name,
+            ),
+          );
+        } else {
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'image',
+              imageXFile.path,
+              filename: imageXFile.name,
+            ),
+          );
+        }
+      }
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 15),
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      Map<String, dynamic> decodedBody = {};
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {}
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final eventJson = decodedBody['event'];
+
+        return CreateEventResult(
+          success: true,
+          message: decodedBody['message']?.toString() ??
+              'Event created successfully.',
+          event: eventJson is Map<String, dynamic>
+              ? Event.fromJson(eventJson)
+              : null,
+          statusCode: response.statusCode,
+        );
+      }
+
+      return CreateEventResult(
+        success: false,
+        message: decodedBody['message']?.toString() ??
+            'Backend responded with error status ${response.statusCode}.',
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return CreateEventResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+      );
+    } on TimeoutException {
+      return CreateEventResult(
+        success: false,
+        message: 'No response. Request timed out.',
+      );
+    } catch (e) {
+      return CreateEventResult(
+        success: false,
+        message: 'Unexpected error: $e',
+      );
+    }
+  }
+  Future<UpdateEventResult> updateEvent({
+    required String token,
+    required int eventId,
+    required String title,
+    required String location,
+    required DateTime date,
+    required double price,
+    String? description,
+    XFile? imageXFile,
+    Uint8List? imageBytes,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/$eventId');
+
+    try {
+      final request = http.MultipartRequest('PUT', url);
+
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Accept'] = 'application/json';
+
+      request.fields['title'] = title.trim();
+      request.fields['location'] = location.trim();
+      request.fields['date'] = date.toIso8601String();
+      request.fields['price'] = price.toString();
+
+      if (description != null && description.trim().isNotEmpty) {
+        request.fields['description'] = description.trim();
+      }
+
+      if (imageXFile != null) {
+        if (kIsWeb) {
+          final bytes = imageBytes ?? await imageXFile.readAsBytes();
+
+          request.files.add(
+            http.MultipartFile.fromBytes(
+              'image',
+              bytes,
+              filename: imageXFile.name,
+            ),
+          );
+        } else {
+          request.files.add(
+            await http.MultipartFile.fromPath(
+              'image',
+              imageXFile.path,
+              filename: imageXFile.name,
+            ),
+          );
+        }
+      }
+
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 15),
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      Map<String, dynamic> decodedBody = {};
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {}
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final eventJson = decodedBody['event'];
+
+        return UpdateEventResult(
+          success: true,
+          message: decodedBody['message']?.toString() ??
+              'Event updated successfully.',
+          event: eventJson is Map<String, dynamic>
+              ? Event.fromJson(eventJson)
+              : null,
+          statusCode: response.statusCode,
+        );
+      }
+
+      return UpdateEventResult(
+        success: false,
+        message: decodedBody['message']?.toString() ??
+            'Backend responded with error status ${response.statusCode}.',
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return UpdateEventResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+      );
+    } on TimeoutException {
+      return UpdateEventResult(
+        success: false,
+        message: 'No response. Request timed out.',
+      );
+    } catch (e) {
+      return UpdateEventResult(
+        success: false,
+        message: 'Unexpected error: $e',
       );
     }
   }

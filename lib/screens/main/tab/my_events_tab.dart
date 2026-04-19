@@ -3,6 +3,8 @@ import 'package:best_rural_events_frontend/models/event.dart';
 import 'package:best_rural_events_frontend/services/event_service.dart';
 
 import '../../event/event_details_page.dart';
+import 'my_events/create_event_page.dart';
+import 'my_events/edit_event_page.dart';
 import 'my_events/manage_event_tickets_page.dart';
 import 'my_events/promote_event_page.dart';
 
@@ -194,22 +196,25 @@ class _MyEventsTabState extends State<MyEventsTab> {
   }
 
   Future<void> _editEvent(Event event) async {
-    _showMessage('Edit event page comes next for "${event.title}"');
-    /*
     final updated = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => EditEventPage(
           token: widget.token,
-          eventId: event.id,
+          event: event,
         ),
       ),
     );
 
+    if (!mounted) return;
+
     if (updated == true) {
-      _loadMyEvents();
+      _showMessage(
+        'Event updated successfully',
+        backgroundColor: Colors.green,
+      );
+      await _loadMyEvents();
     }
-    */
   }
 
   Future<void> _manageTickets(Event event) async {
@@ -225,8 +230,6 @@ class _MyEventsTabState extends State<MyEventsTab> {
   }
 
   Future<void> _createEvent() async {
-    _showMessage('Create event page comes next');
-    /*
     final created = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -234,10 +237,15 @@ class _MyEventsTabState extends State<MyEventsTab> {
       ),
     );
 
+    if (!mounted) return;
+
     if (created == true) {
-      _loadMyEvents();
+      _showMessage(
+        'Event created successfully',
+        backgroundColor: Colors.green,
+      );
+      await _loadMyEvents();
     }
-    */
   }
 
   @override
