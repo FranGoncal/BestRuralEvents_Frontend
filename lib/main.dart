@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'firebase_options.dart';
 import 'screens/auth/login_page.dart';
 import 'services/session_service.dart';
 import 'screens/main/main_navigation_page.dart';
@@ -10,10 +11,13 @@ import 'screens/main/main_navigation_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const BestRuralEventsApp());
 }
-
 class BestRuralEventsApp extends StatelessWidget {
   const BestRuralEventsApp({super.key});
 

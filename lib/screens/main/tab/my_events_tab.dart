@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:best_rural_events_frontend/models/event.dart';
 import 'package:best_rural_events_frontend/services/event_service.dart';
 
+import '../../event/event_details_page.dart';
+import 'my_events/promote_event_page.dart';
+
 class MyEventsTab extends StatefulWidget {
   final String token;
   final String userId;
@@ -152,15 +155,32 @@ class _MyEventsTabState extends State<MyEventsTab> {
   }
 
   Future<void> _promoteEvent(Event event) async {
-    _showMessage(
-      'Promote event comes next for "${event.title}"',
-      backgroundColor: Colors.green,
+    final promoted = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PromoteEventPage(
+          event: event,
+          token: widget.token,
+          userId: widget.userId,
+        ),
+      ),
     );
+
+    if (!mounted) return;
+
+    if (promoted == true) {
+      _showMessage(
+        'Event promoted successfully',
+        backgroundColor: Colors.green,
+      );
+
+      // Optional: reload if backend returns updated event promotion state
+      await _loadMyEvents();
+    }
   }
 
   Future<void> _viewDetails(Event event) async {
-    _showMessage('Open event details for "${event.title}"');
-    /*
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -170,7 +190,6 @@ class _MyEventsTabState extends State<MyEventsTab> {
         ),
       ),
     );
-    */
   }
 
   Future<void> _editEvent(Event event) async {
