@@ -27,6 +27,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   //defines the selected tab
   int _selectedIndex = 0;
 
+
   void _showMessage(String message, {Color? backgroundColor}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(

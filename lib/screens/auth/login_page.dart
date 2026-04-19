@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'signup_page.dart';
@@ -99,6 +100,22 @@ class _LoginPageState extends State<LoginPage> {
         userId: userId,
         email: email,
       );
+
+
+      //TODO
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      debugPrint('============ FCM TOKEN AFTER LOGIN =========');
+      debugPrint(fcmToken ?? 'NO TOKEN');
+      debugPrint('===========================================');
+
+      if (fcmToken != null) {
+        // await NotificationService().registerDeviceToken(
+        //   authToken: token,
+        //   userId: userId,
+        //   fcmToken: fcmToken,
+        // );
+      }
+
 
       Navigator.pushReplacement(
         context,
