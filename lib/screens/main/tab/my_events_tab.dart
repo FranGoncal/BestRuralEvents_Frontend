@@ -3,6 +3,7 @@ import 'package:best_rural_events_frontend/models/event.dart';
 import 'package:best_rural_events_frontend/services/event_service.dart';
 
 import '../../event/event_details_page.dart';
+import 'my_events/manage_event_tickets_page.dart';
 import 'my_events/promote_event_page.dart';
 
 class MyEventsTab extends StatefulWidget {
@@ -212,18 +213,15 @@ class _MyEventsTabState extends State<MyEventsTab> {
   }
 
   Future<void> _manageTickets(Event event) async {
-    _showMessage('Manage tickets page comes next for "${event.title}"');
-    /*
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ManageEventTicketsPage(
           token: widget.token,
-          eventId: event.id,
+          event: event,
         ),
       ),
     );
-    */
   }
 
   Future<void> _createEvent() async {

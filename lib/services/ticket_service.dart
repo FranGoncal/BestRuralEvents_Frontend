@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
+import '../models/event_ticket.dart';
 import '../models/ticket.dart';
 
 class BookTicketResult {
@@ -18,6 +19,26 @@ class BookTicketResult {
     this.statusCode,
     this.bookingReference,
     this.ticketId,
+  });
+}
+
+class EventTicketsResult {
+  final bool success;
+  final String message;
+  final List<EventTicket> tickets;
+  final int? capacity;
+  final int? ticketsSold;
+  final int? ticketsAvailable;
+  final int? statusCode;
+
+  EventTicketsResult({
+    required this.success,
+    required this.message,
+    required this.tickets,
+    this.capacity,
+    this.ticketsSold,
+    this.ticketsAvailable,
+    this.statusCode,
   });
 }
 
@@ -310,6 +331,91 @@ class TicketService {
         success: false,
         valid: false,
         message: 'Unexpected error: $e',
+      );
+    }
+  }
+  Future<EventTicketsResult> getEventTickets({
+    required String token,
+    required int eventId,
+  }) async {
+    final url = Uri.parse('$baseUrl/tickets/event/$eventId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic> decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return EventTicketsResult(
+          success: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          tickets: [],
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final ticketsJson = decodedBody['tickets'];
+
+        if (ticketsJson is! List) {
+          return EventTicketsResult(
+            success: false,
+            message:
+            'Backend responded 2xx, but JSON is not in expected format. Expected: tickets.',
+            tickets: [],
+            statusCode: response.statusCode,
+          );
+        }
+
+        final tickets = ticketsJson
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => EventTicket.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return EventTicketsResult(
+          success: true,
+          message: decodedBody['message']?.toString() ??
+              'Event tickets loaded successfully.',
+          tickets: tickets,
+          capacity: (decodedBody['capacity'] as num?)?.toInt(),
+          ticketsSold: (decodedBody['ticketsSold'] as num?)?.toInt(),
+          ticketsAvailable: (decodedBody['ticketsAvailable'] as num?)?.toInt(),
+          statusCode: response.statusCode,
+        );
+      }
+
+      return EventTicketsResult(
+        success: false,
+        message: decodedBody['message']?.toString() ??
+            'Backend responded with error status ${response.statusCode}.',
+        tickets: [],
+        statusCode: response.statusCode,
+      );
+    } on SocketException {
+      return EventTicketsResult(
+        success: false,
+        message: 'No response. Could not connect to backend.',
+        tickets: [],
+      );
+    } on TimeoutException {
+      return EventTicketsResult(
+        success: false,
+        message: 'No response. Request timed out.',
+        tickets: [],
+      );
+    } catch (e) {
+      return EventTicketsResult(
+        success: false,
+        message: 'Unexpected error: $e',
+        tickets: [],
       );
     }
   }
