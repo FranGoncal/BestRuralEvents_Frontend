@@ -1,8 +1,10 @@
 import 'package:best_rural_events_frontend/screens/main/tab/my_events_tab.dart';
+import 'package:best_rural_events_frontend/screens/main/tab/notification_page.dart';
 import 'package:flutter/material.dart';
 import 'package:best_rural_events_frontend/screens/main/tab/home_tab.dart';
 import 'package:best_rural_events_frontend/screens/main/tab/profile_tab.dart';
 import 'package:best_rural_events_frontend/screens/main/tab/search_tab.dart';
+import '../../services/notification_service.dart';
 import 'tab/my_activity_page.dart';
 
 // The screen the user sees after login
@@ -26,7 +28,9 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   //defines the selected tab
   int _selectedIndex = 0;
+  bool _hasUnreadNotifications = false;
 
+  final NotificationService _notificationService = NotificationService();
 
   void _showMessage(String message, {Color? backgroundColor}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -34,6 +38,75 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       SnackBar(
         content: Text(message),
         backgroundColor: backgroundColor,
+      ),
+    );
+  }
+
+  void _updateNotificationState(bool hasUnread) {
+    if (!mounted) return;
+
+    setState(() {
+      _hasUnreadNotifications = hasUnread;
+    });
+  }
+
+  Future<void> _refreshNotificationBell() async {
+    final result = await _notificationService.loadNotificationStatus(
+      token: widget.token,
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      setState(() {
+        _hasUnreadNotifications = result.hasUnreadNotifications;
+      });
+    } else {
+      _showMessage(
+        result.message,
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+
+  Widget _buildNotificationButton() {
+    const primaryGreen = Color(0xFF2E7D32);
+
+    return IconButton(
+      onPressed: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => NotificationsPage(
+              token: widget.token,
+            ),
+          ),
+        );
+        await _refreshNotificationBell();
+      },
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            _hasUnreadNotifications
+                ? Icons.notifications_active
+                : Icons.notifications_none,
+            color: primaryGreen,
+            size: 28,
+          ),
+          if (_hasUnreadNotifications)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -66,6 +139,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               ),
             ],
           ),
+          actions: [
+            _buildNotificationButton(),
+            const SizedBox(width: 8),
+          ],
         );
       case 4:
         return AppBar(
@@ -110,6 +187,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           token: widget.token,
           userId: widget.userId,
           email: widget.email,
+          onNotificationsChanged: _updateNotificationState,
         );
       case 1:
         return SearchTab(

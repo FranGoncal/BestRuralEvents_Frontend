@@ -263,14 +263,6 @@ class _MyEventsTabState extends State<MyEventsTab> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          Text(
-            'My events',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF37474F),
-            ),
-          ),
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(

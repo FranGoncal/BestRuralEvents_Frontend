@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../services/notification_service.dart';
 import '../../../widgets/event_card.dart';
 import 'profile_tab.dart';
 import '../../../models/event.dart';
@@ -10,12 +11,14 @@ class HomeTab extends StatefulWidget {
   final String token;
   final String userId;
   final String email;
+  final ValueChanged<bool> onNotificationsChanged;
 
   const HomeTab({
     super.key,
     required this.token,
     required this.userId,
     required this.email,
+    required this.onNotificationsChanged,
   });
 
   @override
@@ -25,7 +28,7 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   //service to call the backend
   final EventService _eventService = EventService();
-
+  final NotificationService _notificationService = NotificationService();
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -36,7 +39,14 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
-    _loadEvents();
+    _loadPageData();
+  }
+
+  Future<void> _loadPageData() async {
+    await Future.wait([
+      _loadEvents(),
+      _loadNotifications(),
+    ]);
   }
 
   void _showMessage(String message, {Color? backgroundColor}) {
@@ -47,6 +57,20 @@ class _HomeTabState extends State<HomeTab> {
         backgroundColor: backgroundColor,
       ),
     );
+  }
+
+  Future<void> _loadNotifications() async {
+    final result = await _notificationService.loadNotificationStatus(
+      token: widget.token,
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      widget.onNotificationsChanged(result.hasUnreadNotifications);
+    } else {
+      widget.onNotificationsChanged(false);
+    }
   }
 
   // Get the main page events through the event service
@@ -87,7 +111,6 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
@@ -116,29 +139,6 @@ class _HomeTabState extends State<HomeTab> {
             color: primaryGreen,
           ),
         ),
-        /*const SizedBox(height: 8),
-        Text(
-          'Featured events selected for the main page',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Logged in as: ${widget.email}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-        ),
-        if (_lastUpdated != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Backend last Updated: $_lastUpdated',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-          ),
-        ],*/
         const SizedBox(height: 20),
 
         if (_isLoading)
