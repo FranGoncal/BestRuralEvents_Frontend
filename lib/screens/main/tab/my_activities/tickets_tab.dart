@@ -1,6 +1,7 @@
 import 'package:best_rural_events_frontend/services/ticket_service.dart';
 import 'package:flutter/material.dart';
 import '../../../../models/ticket.dart';
+import '../../../../services/review_service.dart';
 import '../../../../widgets/qr_code_dialog.dart';
 import '../../../event/event_details_page.dart';
 
@@ -20,9 +21,11 @@ class TicketsTab extends StatefulWidget {
 
 class _TicketsTabState extends State<TicketsTab> {
   final TicketService _ticketService = TicketService();
+  final ReviewService _reviewService = ReviewService();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _fromDateController = TextEditingController();
   final TextEditingController _toDateController = TextEditingController();
+
 
   List<Ticket> _tickets = [];
   bool _isLoading = true;
@@ -228,10 +231,9 @@ class _TicketsTabState extends State<TicketsTab> {
       return;
     }
 
-    //TODO
-    /*
-    final success = await _ticketService.createReview(
+    final result = await _reviewService.createReview(
       token: widget.token,
+      userId: widget.userId,
       eventId: ticket.event.id,
       rating: selectedRating,
       comment: comment,
@@ -240,9 +242,13 @@ class _TicketsTabState extends State<TicketsTab> {
     if (!mounted) return;
 
     _showMessage(
-      success ? 'Review submitted successfully.' : 'Could not submit review.',
-      backgroundColor: success ? Colors.green : Colors.red,
-    );*/
+      result.message,
+      backgroundColor: result.success ? Colors.green : Colors.red,
+    );
+
+    if (result.success) {
+      _loadTickets();
+    }
   }
 
   Future<void> _cancelTicket(Ticket ticket) async {
@@ -273,6 +279,7 @@ class _TicketsTabState extends State<TicketsTab> {
     final success = await _ticketService.cancelTicket(
       token: widget.token,
       ticketId: ticket.id,
+      userId: widget.userId
     );
 
     if (!mounted) return;
@@ -286,7 +293,6 @@ class _TicketsTabState extends State<TicketsTab> {
   }
 
   Future<void> _viewTicket(Ticket ticket) async {
-    _showMessage('Validating ticket...');
 
     final result = await _ticketService.validateTicketForQr(
       token: widget.token,

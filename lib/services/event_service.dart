@@ -41,6 +41,20 @@ class UpdateEventResult {
   });
 }
 
+class EventResult {
+  final bool success;
+  final String message;
+  final Event? event;
+  final int? statusCode;
+
+  EventResult({
+    required this.success,
+    required this.message,
+    this.event,
+    this.statusCode,
+  });
+}
+
 class UserCreatedEventsResult {
   final bool success;
   final String message;
@@ -942,6 +956,45 @@ class EventService {
       );
     } catch (e) {
       return UpdateEventResult(
+        success: false,
+        message: 'Unexpected error: $e',
+      );
+    }
+  }
+
+  Future<EventResult> getEventById({
+    required String token,
+    required int eventId,
+  }) async {
+    final url = Uri.parse('$baseUrl/events/$eventId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+
+        return EventResult(
+          success: true,
+          message: 'Event loaded successfully.',
+          event: Event.fromJson(decodedBody),
+          statusCode: response.statusCode,
+        );
+      }
+
+      return EventResult(
+        success: false,
+        message: 'Could not load event.',
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return EventResult(
         success: false,
         message: 'Unexpected error: $e',
       );

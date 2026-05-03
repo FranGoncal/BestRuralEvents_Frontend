@@ -225,6 +225,7 @@ class _MyEventsTabState extends State<MyEventsTab> {
         builder: (_) => ManageEventTicketsPage(
           token: widget.token,
           event: event,
+          userId: widget.userId,
         ),
       ),
     );

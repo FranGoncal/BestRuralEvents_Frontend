@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/event.dart';
 import '../../models/event_review.dart';
 import '../../services/event_service.dart';
+import '../../services/review_service.dart';
 import '../../widgets/expandable_text.dart';
 import '../ticket/buy_ticket_page.dart';
 
@@ -26,6 +27,9 @@ class EventDetailsPage extends StatefulWidget {
 class _EventDetailsPageState extends State<EventDetailsPage> {
   // Service responsible for API calls related to events to the backend
   final EventService _eventService = EventService();
+  final ReviewService _reviewService = ReviewService();
+
+  late Event _event;
 
   bool _isFavoriteLoading = true; // loading spinner for favorite
   bool _isFavorite = false; // actual favorite state
@@ -44,20 +48,37 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   @override
   void initState() {
     super.initState();
+    _event = widget.event;
     _loadExtraData();
   }
 
   //used to load data from different resources
   Future<void> _loadExtraData() async {
+    await _loadEventDetails();
     await _loadFavorite();
     await _loadReviews();
+  }
+
+  Future<void> _loadEventDetails() async {
+    final result = await _eventService.getEventById(
+      token: widget.token,
+      eventId: widget.event.id,
+    );
+
+    if (!mounted) return;
+
+    if (result.success && result.event != null) {
+      setState(() {
+        _event = result.event!;
+      });
+    }
   }
 
   Future<void> _loadFavorite() async {
     try {
       final isFavorite = await _eventService.getIsFavorite(
         token: widget.token,
-        eventId: widget.event.id,
+        eventId: _event.id,
         userId: widget.userId,
       );
 
@@ -78,26 +99,18 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   }
 
   Future<void> _loadReviews() async {
-    try {
-      final reviews = await _eventService.getReviews(
-        token: widget.token,
-        eventId: widget.event.id,
-      );
+    final result = await _reviewService.getReviewsForEvent(
+      token: widget.token,
+      eventId: _event.id,
+    );
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      setState(() {
-        _reviews = reviews;
-        _isReviewsLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _reviewsError = 'Could not load reviews';
-        _isReviewsLoading = false;
-      });
-    }
+    setState(() {
+      _reviews = result.reviews;
+      _reviewsError = result.success ? null : result.message;
+      _isReviewsLoading = false;
+    });
   }
 
   // toggle this event fav (calls event service which calls the backend)
@@ -115,13 +128,13 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     if (_isFavorite) {
       success = await _eventService.removeFavorite(
         token: widget.token,
-        eventId: widget.event.id,
+        eventId: _event.id,
         userId: widget.userId,
       );
     } else {
       success = await _eventService.addFavorite(
         token: widget.token,
-        eventId: widget.event.id,
+        eventId: _event.id,
         userId: widget.userId,
       );
     }
@@ -203,7 +216,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Image.network(
-              widget.event.imageUrl,
+              _event.imageUrl,
               width: double.infinity,
               height: 240,
               fit: BoxFit.cover,
@@ -231,7 +244,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          widget.event.title,
+                          _event.title,
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -268,10 +281,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
                   Row(
                     children: [
-                      _buildStars(widget.event.averageRating),
+                      _buildStars(_event.averageRating),
                       const SizedBox(width: 8),
                       Text(
-                        '${widget.event.averageRating.toStringAsFixed(1)} (${widget.event.totalReviews})',
+                        '${_event.averageRating.toStringAsFixed(1)} (${_event.totalReviews})',
                         style: TextStyle(color: Colors.grey[700]),
                       ),
                     ],
@@ -304,7 +317,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                widget.event.location,
+                                _event.location,
                                 style: const TextStyle(fontSize: 16),
                               ),
                             ),
@@ -319,7 +332,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              _formatDate(widget.event.date),
+                              _formatDate(_event.date),
                               style: const TextStyle(fontSize: 16),
                             ),
                           ],
@@ -333,7 +346,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              _formatPrice(widget.event.price),
+                              _formatPrice(_event.price),
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -357,7 +370,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                   const SizedBox(height: 12),
 
                   ExpandableText(
-                    text: widget.event.description ?? 'No description available.',
+                    text: _event.description ?? 'No description available.',
                   ),
 
                   const SizedBox(height: 28),
@@ -371,7 +384,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => BuyTicketPage(
-                              event: widget.event,
+                              event: _event,
                               token: widget.token,
                             ),
                           ),

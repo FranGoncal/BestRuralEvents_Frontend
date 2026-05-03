@@ -1,60 +1,79 @@
 import 'package:flutter/material.dart';
+
+import '../../../../models/event_review.dart';
+import '../../../../services/review_service.dart';
 import '../../../../widgets/expandable_text.dart';
 
 class ReviewsTab extends StatefulWidget {
-  const ReviewsTab({super.key});
+  final String token;
+  final String userId;
+
+  const ReviewsTab({
+    super.key,
+    required this.token,
+    required this.userId,
+  });
 
   @override
   State<ReviewsTab> createState() => _ReviewsTabState();
 }
 
 class _ReviewsTabState extends State<ReviewsTab> {
+  final ReviewService _reviewService = ReviewService();
+
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _eventDateController = TextEditingController();
 
+  List<EventReview> _reviews = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
   DateTime? _selectedEventDate;
-
-  final List<UserReview> _reviews = [
-    UserReview(
-      id: '1',
-      eventName: 'Medieval Fair at the Castle',
-      eventDate: DateTime(2024, 10, 14),
-      rating: 5,
-      comment: 'Loved the atmosphere, but it was very cold at night.',
-    ),
-    UserReview(
-      id: '2',
-      eventName: 'Medieval Fair in Alcains',
-      eventDate: DateTime(2024, 9, 15),
-      rating: 5,
-      comment: 'Great food and music, would visit again.',
-    ),
-    UserReview(
-      id: '3',
-      eventName: 'Autumn Wine Festival',
-      eventDate: DateTime(2024, 11, 2),
-      rating: 4,
-      comment:
-      'Very well organized event with lots of local products. The lines were a bit long at some stands, but overall it was a great experience and I would recommend it.',
-    ),
-  ];
-
   String _searchQuery = '';
 
-  List<UserReview> get _filteredReviews {
+  @override
+  void initState() {
+    super.initState();
+    _loadReviews();
+  }
+
+  List<EventReview> get _filteredReviews {
     return _reviews.where((review) {
       final matchesSearch = review.eventName.toLowerCase().contains(
         _searchQuery.toLowerCase(),
       );
 
+      final eventDate = review.eventDate;
+
       final matchesDate =
           _selectedEventDate == null ||
-              (review.eventDate.year == _selectedEventDate!.year &&
-                  review.eventDate.month == _selectedEventDate!.month &&
-                  review.eventDate.day == _selectedEventDate!.day);
+              (eventDate != null &&
+                  eventDate.year == _selectedEventDate!.year &&
+                  eventDate.month == _selectedEventDate!.month &&
+                  eventDate.day == _selectedEventDate!.day);
 
       return matchesSearch && matchesDate;
     }).toList();
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final result = await _reviewService.getMyReviews(
+      token: widget.token,
+      userId: widget.userId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _reviews = result.reviews;
+      _isLoading = false;
+      _errorMessage = result.success ? null : result.message;
+    });
   }
 
   @override
@@ -93,7 +112,7 @@ class _ReviewsTabState extends State<ReviewsTab> {
     });
   }
 
-  Future<void> _removeReview(UserReview review) async {
+  Future<void> _removeReview(EventReview review) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -116,31 +135,57 @@ class _ReviewsTabState extends State<ReviewsTab> {
       },
     );
 
-    if (confirm == true) {
+    if (confirm != true) return;
+
+    final result = await _reviewService.deleteReview(
+      token: widget.token,
+      userId: widget.userId,
+      reviewId: review.id,
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
       setState(() {
         _reviews.removeWhere((r) => r.id == review.id);
       });
-
-      _showMessage('Review removed', backgroundColor: Colors.red);
     }
+
+    _showMessage(
+      result.message,
+      backgroundColor: result.success ? Colors.green : Colors.red,
+    );
   }
 
-  void _updateReview({
-    required String reviewId,
+  Future<void> _updateReview({
+    required EventReview review,
     required int newRating,
     required String newComment,
-  }) {
-    final index = _reviews.indexWhere((r) => r.id == reviewId);
-    if (index == -1) return;
+  }) async {
+    final result = await _reviewService.updateReview(
+      token: widget.token,
+      userId: widget.userId,
+      reviewId: review.id,
+      eventId: review.eventId,
+      rating: newRating,
+      comment: newComment,
+    );
 
-    setState(() {
-      _reviews[index] = _reviews[index].copyWith(
-        rating: newRating,
-        comment: newComment,
-      );
-    });
+    if (!mounted) return;
 
-    _showMessage('Review updated', backgroundColor: Colors.green);
+    if (result.success && result.review != null) {
+      setState(() {
+        final index = _reviews.indexWhere((r) => r.id == review.id);
+        if (index != -1) {
+          _reviews[index] = result.review!;
+        }
+      });
+    }
+
+    _showMessage(
+      result.message,
+      backgroundColor: result.success ? Colors.green : Colors.red,
+    );
   }
 
   void _showMessage(String message, {Color? backgroundColor}) {
@@ -189,6 +234,7 @@ class _ReviewsTabState extends State<ReviewsTab> {
             children: [
               TextField(
                 controller: _searchController,
+                onSubmitted: (_) => _applyFilters(),
                 decoration: InputDecoration(
                   hintText: 'Search by event name',
                   hintStyle: TextStyle(color: Colors.grey.shade500),
@@ -231,7 +277,8 @@ class _ReviewsTabState extends State<ReviewsTab> {
                           decoration: InputDecoration(
                             hintText: 'Select date',
                             hintStyle: TextStyle(color: Colors.grey.shade500),
-                            suffixIcon: const Icon(Icons.calendar_today_outlined),
+                            suffixIcon:
+                            const Icon(Icons.calendar_today_outlined),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 14,
                               vertical: 14,
@@ -288,7 +335,14 @@ class _ReviewsTabState extends State<ReviewsTab> {
 
         const SizedBox(height: 16),
 
-        if (filteredReviews.isEmpty)
+        if (_isLoading)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: 40),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (_errorMessage != null)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -296,36 +350,62 @@ class _ReviewsTabState extends State<ReviewsTab> {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: const Text(
-              'No reviews found.',
-              textAlign: TextAlign.center,
+            child: Column(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.red, size: 42),
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: _loadReviews,
+                  child: const Text('Try again'),
+                ),
+              ],
             ),
           )
-        else
-          ...filteredReviews.map(
-                (review) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: ReviewCard(
-                review: review,
-                formattedDate: _formatDate(review.eventDate),
-                onRemove: () => _removeReview(review),
-                onUpdate: (newRating, newComment) {
-                  _updateReview(
-                    reviewId: review.id,
-                    newRating: newRating,
-                    newComment: newComment,
-                  );
-                },
+        else if (filteredReviews.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: const Text(
+                'No reviews found.',
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            ...filteredReviews.map(
+                  (review) => Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: ReviewCard(
+                  review: review,
+                  formattedDate: review.eventDate == null
+                      ? 'Unknown date'
+                      : _formatDate(review.eventDate!),
+                  onRemove: () => _removeReview(review),
+                  onUpdate: (newRating, newComment) {
+                    _updateReview(
+                      review: review,
+                      newRating: newRating,
+                      newComment: newComment,
+                    );
+                  },
+                ),
               ),
             ),
-          ),
       ],
     );
   }
 }
 
 class ReviewCard extends StatefulWidget {
-  final UserReview review;
+  final EventReview review;
   final String formattedDate;
   final VoidCallback onRemove;
   final void Function(int rating, String comment) onUpdate;
@@ -496,7 +576,9 @@ class _ReviewCardState extends State<ReviewCard> {
                 border: Border.all(color: Colors.grey.shade300),
               ),
               child: ExpandableText(
-                text: widget.review.comment,
+                text: widget.review.comment.isEmpty
+                    ? 'No comment.'
+                    : widget.review.comment,
                 maxLines: 3,
               ),
             ),
@@ -586,38 +668,6 @@ class EditableStarRating extends StatelessWidget {
           constraints: const BoxConstraints(),
         );
       }),
-    );
-  }
-}
-
-class UserReview {
-  final String id;
-  final String eventName;
-  final DateTime eventDate;
-  final int rating;
-  final String comment;
-
-  UserReview({
-    required this.id,
-    required this.eventName,
-    required this.eventDate,
-    required this.rating,
-    required this.comment,
-  });
-
-  UserReview copyWith({
-    String? id,
-    String? eventName,
-    DateTime? eventDate,
-    int? rating,
-    String? comment,
-  }) {
-    return UserReview(
-      id: id ?? this.id,
-      eventName: eventName ?? this.eventName,
-      eventDate: eventDate ?? this.eventDate,
-      rating: rating ?? this.rating,
-      comment: comment ?? this.comment,
     );
   }
 }

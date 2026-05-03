@@ -6,11 +6,13 @@ import 'package:best_rural_events_frontend/services/ticket_service.dart';
 class ManageEventTicketsPage extends StatefulWidget {
   final String token;
   final Event event;
+  final String userId;
 
   const ManageEventTicketsPage({
     super.key,
     required this.token,
     required this.event,
+    required this.userId,
   });
 
   @override
@@ -107,6 +109,7 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
     final success = await _ticketService.cancelTicket(
       token: widget.token,
       ticketId: ticket.id,
+      userId: widget.userId
     );
 
     if (!mounted) return;
