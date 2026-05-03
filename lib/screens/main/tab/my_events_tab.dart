@@ -190,6 +190,7 @@ class _MyEventsTabState extends State<MyEventsTab> {
         builder: (_) => EventDetailsPage(
           event: event,
           token: widget.token,
+          userId: widget.userId,
         ),
       ),
     );

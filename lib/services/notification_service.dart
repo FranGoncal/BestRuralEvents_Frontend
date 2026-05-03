@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 import '../models/app_notification.dart';
 
 class NotificationStatusResult {
@@ -38,7 +39,7 @@ class DeleteNotificationResult {
 }
 
 class NotificationService {
-  static const String _baseUrl = 'http://192.168.1.68:8080';
+  static String get _baseUrl => AppConfig.baseUrl;
 
   Future<NotificationStatusResult> loadNotificationStatus({
     required String token,

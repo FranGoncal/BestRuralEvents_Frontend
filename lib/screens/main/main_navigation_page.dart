@@ -192,6 +192,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       case 1:
         return SearchTab(
           token: widget.token,
+          userId: widget.userId,
         );
       case 2:
         return MyActivityPage(

@@ -6,10 +6,12 @@ import '../../../widgets/event_card.dart';
 
 class SearchTab extends StatefulWidget {
   final String token;
+  final String userId;
 
   const SearchTab({
     super.key,
     required this.token,
+    required this.userId,
   });
 
   @override
@@ -30,7 +32,7 @@ class _SearchTabState extends State<SearchTab> {
   bool _isLoadingMore = false;
   bool _hasMore = false;
 
-  int _currentPage = 1;
+  int _currentPage = 0;
   final int _pageSize = 10;
 
   String? _errorMessage;
@@ -84,7 +86,7 @@ class _SearchTabState extends State<SearchTab> {
       _hasSearched = true;
       _isSearching = true;
       _isLoadingMore = false;
-      _currentPage = 1;
+      _currentPage = 0;
       _events = [];
       _hasMore = false;
       _errorMessage = null;
@@ -99,7 +101,7 @@ class _SearchTabState extends State<SearchTab> {
       activityType: _activityType,
       startDate: _startDate,
       endDate: _endDate,
-      page: 1,
+      page: 0,
       pageSize: _pageSize,
     );
 
@@ -190,7 +192,7 @@ class _SearchTabState extends State<SearchTab> {
       _hasSearched = false;
       _hasMore = false;
       _errorMessage = null;
-      _currentPage = 1;
+      _currentPage = 0;
     });
   }
 
@@ -624,6 +626,7 @@ class _SearchTabState extends State<SearchTab> {
           formattedDate: _formatEventDate(event),
           formattedPrice: _formatEventPrice(event),
           token: widget.token,
+          userId: widget.userId,
         );
       },
     );

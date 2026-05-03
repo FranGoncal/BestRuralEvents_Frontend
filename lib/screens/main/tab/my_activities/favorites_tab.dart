@@ -5,10 +5,12 @@ import '../../../../widgets/event_card.dart';
 
 class FavoritesTab extends StatefulWidget {
   final String token;
+  final String userId;
 
   const FavoritesTab({
     super.key,
     required this.token,
+    required this.userId,
   });
 
   @override
@@ -44,6 +46,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
 
     final result = await _eventService.getFavoriteEvents(
       token: widget.token,
+      userId: widget.userId,
     );
 
     if (!mounted) return;
@@ -233,6 +236,7 @@ class _FavoritesTabState extends State<FavoritesTab> {
                   formattedDate: _formatDate(event.date),
                   formattedPrice: _formatPrice(event.price),
                   token: widget.token,
+                  userId: widget.userId,
                 ),
               ),
       ],

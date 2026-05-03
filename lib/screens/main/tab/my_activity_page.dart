@@ -56,7 +56,10 @@ class MyActivityPage extends StatelessWidget {
                   token: token,
                   userId: userId,
                 ),
-                FavoritesTab(token: token),
+                FavoritesTab(
+                  token: token,
+                  userId: userId,
+                ),
                 const ReviewsTab(),
               ],
             ),

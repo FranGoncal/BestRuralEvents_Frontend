@@ -121,8 +121,12 @@ class EventService {
   Future<bool> getIsFavorite({
     required String token,
     required int eventId,
+    required String userId,
   }) async {
-    final url = Uri.parse('$baseUrl/events/$eventId/favorite');
+    final url = Uri.parse('$baseUrl/events/$eventId/favorite')
+        .replace(queryParameters: {
+      'userId': userId.toString(),
+    });
 
     try {
       final response = await http.get(
@@ -187,8 +191,12 @@ class EventService {
   Future<bool> addFavorite({
     required String token,
     required int eventId,
+    required String userId,
   }) async {
-    final url = Uri.parse('$baseUrl/events/$eventId/favorite');
+    final url = Uri.parse('$baseUrl/events/$eventId/favorite')
+        .replace(queryParameters: {
+      'userId': userId.toString(),
+    });
 
     try {
       final response = await http.post(
@@ -212,8 +220,12 @@ class EventService {
   Future<bool> removeFavorite({
     required String token,
     required int eventId,
+    required String userId,
   }) async {
-    final url = Uri.parse('$baseUrl/events/$eventId/favorite');
+    final url = Uri.parse('$baseUrl/events/$eventId/favorite')
+        .replace(queryParameters: {
+      'userId': userId.toString(),
+    });
 
     try {
       final response = await http.delete(
@@ -236,8 +248,12 @@ class EventService {
 
   Future<EventsResult> getFavoriteEvents({
     required String token,
+    required String userId,
   }) async {
-    final url = Uri.parse('$baseUrl/events/favourites');
+    final url = Uri.parse('$baseUrl/events/favourites')
+        .replace(queryParameters: {
+      'userId': userId.toString(),
+    });
 
     try {
       final response = await http.get(

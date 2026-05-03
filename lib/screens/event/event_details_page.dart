@@ -9,12 +9,15 @@ class EventDetailsPage extends StatefulWidget {
   // Data passed INTO this page from previous screen
   final Event event;
   final String token;
+  final String userId;
 
   const EventDetailsPage({
     super.key,
     required this.event,
     required this.token,
+    required this.userId,
   });
+
 
   @override
   State<EventDetailsPage> createState() => _EventDetailsPageState();
@@ -55,6 +58,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       final isFavorite = await _eventService.getIsFavorite(
         token: widget.token,
         eventId: widget.event.id,
+        userId: widget.userId,
       );
 
       if (!mounted) return;
@@ -112,11 +116,13 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       success = await _eventService.removeFavorite(
         token: widget.token,
         eventId: widget.event.id,
+        userId: widget.userId,
       );
     } else {
       success = await _eventService.addFavorite(
         token: widget.token,
         eventId: widget.event.id,
+        userId: widget.userId,
       );
     }
 

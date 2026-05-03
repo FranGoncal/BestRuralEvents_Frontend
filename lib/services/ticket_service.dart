@@ -160,7 +160,7 @@ class TicketService {
     required String token,
     required String userId,
   }) async {
-    final url = Uri.parse('$baseUrl/tickets/user/$userId');
+    final url = Uri.parse('$baseUrl/tickets/my');
 
     try {
       final response = await http.get(
@@ -168,43 +168,29 @@ class TicketService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
         },
       ).timeout(const Duration(seconds: 8));
 
-      Map<String, dynamic> decodedBody;
-
-      try {
-        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
-      } catch (_) {
-        return TicketsResult(
-          success: false,
-          message: 'Backend responded, but body is not valid JSON.',
-          tickets: [],
-          statusCode: response.statusCode,
-        );
-      }
+      final decodedBody = jsonDecode(response.body);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final ticketsJson = decodedBody['tickets'];
-
-        if (ticketsJson is! List) {
+        if (decodedBody is! List) {
           return TicketsResult(
             success: false,
-            message:
-            'Backend responded 2xx, but JSON is not in expected format. Expected: tickets.',
+            message: 'Expected a list of tickets.',
             tickets: [],
             statusCode: response.statusCode,
           );
         }
 
-        final tickets = ticketsJson
+        final tickets = decodedBody
             .map((item) => Ticket.fromJson(item as Map<String, dynamic>))
             .toList();
 
         return TicketsResult(
           success: true,
-          message:
-          decodedBody['message']?.toString() ?? 'Tickets loaded successfully.',
+          message: 'Tickets loaded successfully.',
           tickets: tickets,
           statusCode: response.statusCode,
         );
@@ -212,21 +198,20 @@ class TicketService {
 
       return TicketsResult(
         success: false,
-        message: decodedBody['message']?.toString() ??
-            'Backend responded with error status ${response.statusCode}.',
+        message: 'Backend error ${response.statusCode}',
         tickets: [],
         statusCode: response.statusCode,
       );
     } on SocketException {
       return TicketsResult(
         success: false,
-        message: 'No response. Could not connect to backend.',
+        message: 'Could not connect to backend.',
         tickets: [],
       );
     } on TimeoutException {
       return TicketsResult(
         success: false,
-        message: 'No response. Request timed out.',
+        message: 'Request timed out.',
         tickets: [],
       );
     } catch (e) {

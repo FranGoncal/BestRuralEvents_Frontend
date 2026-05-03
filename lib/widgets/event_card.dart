@@ -10,12 +10,14 @@ class EventCard extends StatelessWidget {
   final String formattedDate;
   final String formattedPrice;
   final String token;
+  final String userId;
 
   const EventCard({
     required this.event,
     required this.formattedDate,
     required this.formattedPrice,
     required this.token,
+    required this.userId,
   });
 
   @override
@@ -110,7 +112,7 @@ class EventCard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => EventDetailsPage(event: event, token: token,),
+                          builder: (_) => EventDetailsPage(event: event, token: token, userId: userId,),
                         ),
                       );
                     },

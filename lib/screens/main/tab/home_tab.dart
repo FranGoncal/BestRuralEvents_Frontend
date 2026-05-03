@@ -196,6 +196,7 @@ class _HomeTabState extends State<HomeTab> {
                 formattedDate: _formatDate(event.date),
                 formattedPrice: _formatPrice(event.price),
                 token: widget.token,
+                userId: widget.userId,
               ),
             ),
       ],

@@ -67,7 +67,7 @@ class AuthService {
 
       // if success
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final hasToken = decodedBody['token'] is String;
+        final hasToken = decodedBody['accessToken'] is String;
         final hasUserId = decodedBody['userId'] != null;
         final hasEmail = decodedBody['email'] is String;
 

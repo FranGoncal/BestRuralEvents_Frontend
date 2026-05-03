@@ -528,6 +528,7 @@ class _TicketsTabState extends State<TicketsTab> {
                   child: TicketCard(
                     ticket: ticket,
                     token: widget.token,
+                    userId: widget.userId,
                     formattedPrice: _formatPrice(ticket.price),
                     formattedPurchaseDate: _formatDate(ticket.purchaseDate),
                     onRate: ticket.canReview
@@ -548,6 +549,7 @@ class _TicketsTabState extends State<TicketsTab> {
 class TicketCard extends StatelessWidget {
   final Ticket ticket;
   final String token;
+  final String userId;
   final String formattedPrice;
   final String formattedPurchaseDate;
   final VoidCallback? onRate;
@@ -558,6 +560,7 @@ class TicketCard extends StatelessWidget {
     super.key,
     required this.ticket,
     required this.token,
+    required this.userId,
     required this.formattedPrice,
     required this.formattedPurchaseDate,
     required this.onRate,
@@ -659,6 +662,8 @@ class TicketCard extends StatelessWidget {
                         builder: (_) => EventDetailsPage(
                           event: ticket.event,
                           token: token,
+                          userId: userId,
+
                         ),
                       ),
                     );
