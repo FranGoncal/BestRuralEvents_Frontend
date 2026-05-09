@@ -67,7 +67,7 @@ class Ticket {
       location: '',
       startDate: DateTime.now(),
       endDate: DateTime.now(),
-      imageUrl: '',
+      imageUrls: const [],
       price: 0.0,
       averageRating: 0.0,
       totalReviews: 0,

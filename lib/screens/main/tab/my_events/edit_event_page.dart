@@ -10,11 +10,13 @@ import '../../../../services/event_service.dart';
 
 class EditEventPage extends StatefulWidget {
   final String token;
+  final String userId;
   final Event event;
 
   const EditEventPage({
     super.key,
     required this.token,
+    required this.userId,
     required this.event,
   });
 
@@ -29,13 +31,16 @@ class _EditEventPageState extends State<EditEventPage> {
 
   late final TextEditingController _titleController;
   late final TextEditingController _locationController;
-  late final TextEditingController _dateController;
+  late final TextEditingController _startDateController;
+  late final TextEditingController _endDateController;
   late final TextEditingController _priceController;
   late final TextEditingController _descriptionController;
 
-  DateTime? _selectedDate;
-  XFile? _selectedImage;
-  Uint8List? _selectedImageBytes;
+  DateTime? _selectedStartDate;
+  DateTime? _selectedEndDate;
+
+  List<XFile> _selectedImages = [];
+  List<Uint8List> _selectedImageBytes = [];
 
   bool _isSubmitting = false;
 
@@ -43,12 +48,16 @@ class _EditEventPageState extends State<EditEventPage> {
   void initState() {
     super.initState();
 
-    _selectedDate = widget.event.date;
+    _selectedStartDate = widget.event.startDate;
+    _selectedEndDate = widget.event.endDate;
 
     _titleController = TextEditingController(text: widget.event.title);
     _locationController = TextEditingController(text: widget.event.location);
-    _dateController = TextEditingController(
-      text: _formatDateTime(widget.event.date),
+    _startDateController = TextEditingController(
+      text: _formatDate(widget.event.startDate),
+    );
+    _endDateController = TextEditingController(
+      text: _formatDate(widget.event.endDate),
     );
     _priceController = TextEditingController(
       text: widget.event.price == widget.event.price.roundToDouble()
@@ -64,72 +73,70 @@ class _EditEventPageState extends State<EditEventPage> {
   void dispose() {
     _titleController.dispose();
     _locationController.dispose();
-    _dateController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
+  Future<void> _pickDate({required bool isStartDate}) async {
     final now = DateTime.now();
+    final currentValue = isStartDate ? _selectedStartDate : _selectedEndDate;
 
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? now,
+      initialDate: currentValue ?? now,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(2100),
     );
 
     if (pickedDate == null || !mounted) return;
 
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedDate ?? now),
-    );
-
-    if (pickedTime == null) return;
-
-    final fullDate = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-
     setState(() {
-      _selectedDate = fullDate;
-      _dateController.text = _formatDateTime(fullDate);
+      if (isStartDate) {
+        _selectedStartDate = pickedDate;
+        _startDateController.text = _formatDate(pickedDate);
+
+        if (_selectedEndDate != null &&
+            _selectedEndDate!.isBefore(pickedDate)) {
+          _selectedEndDate = null;
+          _endDateController.clear();
+        }
+      } else {
+        _selectedEndDate = pickedDate;
+        _endDateController.text = _formatDate(pickedDate);
+      }
     });
   }
 
-  Future<void> _pickImage() async {
-    final picked = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
+  Future<void> _pickImages() async {
+    final pickedImages = await _imagePicker.pickMultiImage(
       imageQuality: 85,
     );
 
-    if (picked == null) return;
+    if (pickedImages.isEmpty) return;
 
-    Uint8List? bytes;
+    final bytesList = <Uint8List>[];
+
     if (kIsWeb) {
-      bytes = await picked.readAsBytes();
+      for (final image in pickedImages) {
+        bytesList.add(await image.readAsBytes());
+      }
     }
 
     setState(() {
-      _selectedImage = picked;
-      _selectedImageBytes = bytes;
+      _selectedImages = pickedImages;
+      _selectedImageBytes = bytesList;
     });
   }
 
-  String _formatDateTime(DateTime date) {
+  String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year.toString();
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
 
-    return '$day/$month/$year $hour:$minute';
+    return '$day/$month/$year';
   }
 
   void _showMessage(String message, {Color? backgroundColor}) {
@@ -147,9 +154,17 @@ class _EditEventPageState extends State<EditEventPage> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedDate == null) {
+    if (_selectedStartDate == null || _selectedEndDate == null) {
       _showMessage(
-        'Please select a date and time.',
+        'Please select start and end dates.',
+        backgroundColor: Colors.red,
+      );
+      return;
+    }
+
+    if (_selectedEndDate!.isBefore(_selectedStartDate!)) {
+      _showMessage(
+        'End date cannot be before start date.',
         backgroundColor: Colors.red,
       );
       return;
@@ -170,13 +185,15 @@ class _EditEventPageState extends State<EditEventPage> {
 
     final result = await _eventService.updateEvent(
       token: widget.token,
+      userId: widget.userId,
       eventId: widget.event.id,
       title: _titleController.text,
       location: _locationController.text,
-      date: _selectedDate!,
+      startDate: _selectedStartDate!,
+      endDate: _selectedEndDate!,
       price: price,
       description: _descriptionController.text,
-      imageXFile: _selectedImage,
+      imageFiles: _selectedImages,
       imageBytes: _selectedImageBytes,
     );
 
@@ -201,49 +218,64 @@ class _EditEventPageState extends State<EditEventPage> {
   }
 
   Widget _buildImagePreview() {
-    if (_selectedImage != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: kIsWeb
-            ? (_selectedImageBytes != null
-            ? Image.memory(
-          _selectedImageBytes!,
-          height: 220,
-          width: double.infinity,
-          fit: BoxFit.cover,
-        )
-            : Container(
-          height: 220,
-          color: Colors.grey.shade200,
-          alignment: Alignment.center,
-          child: const Text('Could not preview image'),
-        ))
-            : Image.file(
-          File(_selectedImage!.path),
-          height: 220,
-          width: double.infinity,
-          fit: BoxFit.cover,
+    final existingImages = widget.event.imageUrls;
+
+    if (_selectedImages.isNotEmpty) {
+      return SizedBox(
+        height: 120,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _selectedImages.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: kIsWeb
+                  ? Image.memory(
+                _selectedImageBytes[index],
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+              )
+                  : Image.file(
+                File(_selectedImages[index].path),
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+              ),
+            );
+          },
         ),
       );
     }
 
-    if (widget.event.imageUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Image.network(
-          widget.event.imageUrl,
-          height: 220,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) {
-            return Container(
-              height: 220,
-              color: Colors.grey.shade200,
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.image_not_supported_outlined,
-                size: 40,
-                color: Colors.grey,
+    if (existingImages.isNotEmpty) {
+      return SizedBox(
+        height: 120,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: existingImages.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                existingImages[index],
+                width: 120,
+                height: 120,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) {
+                  return Container(
+                    width: 120,
+                    height: 120,
+                    color: Colors.grey.shade200,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.image_not_supported_outlined,
+                      color: Colors.grey,
+                    ),
+                  );
+                },
               ),
             );
           },
@@ -252,7 +284,7 @@ class _EditEventPageState extends State<EditEventPage> {
     }
 
     return Container(
-      height: 220,
+      height: 120,
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(14),
@@ -314,17 +346,42 @@ class _EditEventPageState extends State<EditEventPage> {
               const SizedBox(height: 12),
 
               GestureDetector(
-                onTap: _pickDate,
+                onTap: () => _pickDate(isStartDate: true),
                 child: AbsorbPointer(
                   child: TextFormField(
-                    controller: _dateController,
-                    decoration: _inputDecoration('Date and time').copyWith(
+                    controller: _startDateController,
+                    decoration: _inputDecoration('Start date').copyWith(
                       suffixIcon: const Icon(Icons.calendar_today_outlined),
                     ),
-                    validator: (value) {
-                      if (_selectedDate == null) {
-                        return 'Please select a date and time';
+                    validator: (_) {
+                      if (_selectedStartDate == null) {
+                        return 'Please select a start date';
                       }
+                      return null;
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              GestureDetector(
+                onTap: () => _pickDate(isStartDate: false),
+                child: AbsorbPointer(
+                  child: TextFormField(
+                    controller: _endDateController,
+                    decoration: _inputDecoration('End date').copyWith(
+                      suffixIcon: const Icon(Icons.calendar_today_outlined),
+                    ),
+                    validator: (_) {
+                      if (_selectedEndDate == null) {
+                        return 'Please select an end date';
+                      }
+
+                      if (_selectedStartDate != null &&
+                          _selectedEndDate!.isBefore(_selectedStartDate!)) {
+                        return 'End date cannot be before start date';
+                      }
+
                       return null;
                     },
                   ),
@@ -334,7 +391,8 @@ class _EditEventPageState extends State<EditEventPage> {
 
               TextFormField(
                 controller: _priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
                 decoration: _inputDecoration('Price (€)'),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -362,7 +420,7 @@ class _EditEventPageState extends State<EditEventPage> {
               const SizedBox(height: 16),
 
               Text(
-                'Event image',
+                'Event images',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -370,10 +428,10 @@ class _EditEventPageState extends State<EditEventPage> {
               const SizedBox(height: 10),
 
               OutlinedButton.icon(
-                onPressed: _pickImage,
+                onPressed: _pickImages,
                 icon: const Icon(Icons.upload_outlined),
                 label: Text(
-                  _selectedImage == null ? 'Replace image' : 'Change image',
+                  _selectedImages.isEmpty ? 'Replace images' : 'Change images',
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: primaryGreen,

@@ -788,7 +788,7 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                           top: Radius.circular(18),
                         ),
                         child: Image.network(
-                          widget.event.imageUrl,
+                          widget.event.imageUrls.isNotEmpty ? widget.event.imageUrls.first : '',
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,

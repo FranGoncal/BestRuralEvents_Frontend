@@ -775,8 +775,8 @@ class EventService {
     required DateTime endDate,
     required double price,
     String? description,
-    XFile? imageXFile,
-    Uint8List? imageBytes,
+    required List<XFile> imageFiles,
+    required List<Uint8List> imageBytes,
   }) async {
     final url = Uri.parse('$baseUrl/events');
 
@@ -797,23 +797,23 @@ class EventService {
         request.fields['description'] = description.trim();
       }
 
-      if (imageXFile != null) {
-        if (kIsWeb) {
-          final bytes = imageBytes ?? await imageXFile.readAsBytes();
+      for (int i = 0; i < imageFiles.length; i++) {
+        final image = imageFiles[i];
 
+        if (kIsWeb) {
           request.files.add(
             http.MultipartFile.fromBytes(
-              'image',
-              bytes,
-              filename: imageXFile.name,
+              'images',
+              imageBytes[i],
+              filename: image.name,
             ),
           );
         } else {
           request.files.add(
             await http.MultipartFile.fromPath(
-              'image',
-              imageXFile.path,
-              filename: imageXFile.name,
+              'images',
+              image.path,
+              filename: image.name,
             ),
           );
         }
@@ -831,15 +831,13 @@ class EventService {
       } catch (_) {}
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final eventJson = decodedBody['event'];
-
         return CreateEventResult(
           success: true,
           message: decodedBody['message']?.toString() ??
               'Event created successfully.',
-          event: eventJson is Map<String, dynamic>
-              ? Event.fromJson(eventJson)
-              : null,
+          event: decodedBody.containsKey('event')
+              ? Event.fromJson(decodedBody['event'] as Map<String, dynamic>)
+              : Event.fromJson(decodedBody),
           statusCode: response.statusCode,
         );
       }
@@ -867,16 +865,20 @@ class EventService {
       );
     }
   }
+
+
   Future<UpdateEventResult> updateEvent({
     required String token,
+    required String userId,
     required int eventId,
     required String title,
     required String location,
-    required DateTime date,
+    required DateTime startDate,
+    required DateTime endDate,
     required double price,
     String? description,
-    XFile? imageXFile,
-    Uint8List? imageBytes,
+    List<XFile>? imageFiles,
+    List<Uint8List>? imageBytes,
   }) async {
     final url = Uri.parse('$baseUrl/events/$eventId');
 
@@ -888,32 +890,39 @@ class EventService {
 
       request.fields['title'] = title.trim();
       request.fields['location'] = location.trim();
-      request.fields['date'] = date.toIso8601String();
+      request.fields['startDate'] =
+          startDate.toIso8601String().split('T').first;
+
+      request.fields['endDate'] =
+          endDate.toIso8601String().split('T').first;
       request.fields['price'] = price.toString();
+      request.headers['X-User-Id'] = userId;
 
       if (description != null && description.trim().isNotEmpty) {
         request.fields['description'] = description.trim();
       }
 
-      if (imageXFile != null) {
-        if (kIsWeb) {
-          final bytes = imageBytes ?? await imageXFile.readAsBytes();
+      if (imageFiles != null && imageFiles.isNotEmpty) {
+        for (int i = 0; i < imageFiles.length; i++) {
+          final image = imageFiles[i];
 
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'image',
-              bytes,
-              filename: imageXFile.name,
-            ),
-          );
-        } else {
-          request.files.add(
-            await http.MultipartFile.fromPath(
-              'image',
-              imageXFile.path,
-              filename: imageXFile.name,
-            ),
-          );
+          if (kIsWeb) {
+            request.files.add(
+              http.MultipartFile.fromBytes(
+                'images',
+                imageBytes![i],
+                filename: image.name,
+              ),
+            );
+          } else {
+            request.files.add(
+              await http.MultipartFile.fromPath(
+                'images',
+                image.path,
+                filename: image.name,
+              ),
+            );
+          }
         }
       }
 

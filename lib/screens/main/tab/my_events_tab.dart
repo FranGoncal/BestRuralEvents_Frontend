@@ -202,6 +202,7 @@ class _MyEventsTabState extends State<MyEventsTab> {
       MaterialPageRoute(
         builder: (_) => EditEventPage(
           token: widget.token,
+          userId: widget.userId,
           event: event,
         ),
       ),
@@ -507,7 +508,7 @@ class MyEventCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Image.network(
-              event.imageUrl,
+              event.imageUrls.isNotEmpty ? event.imageUrls.first : '',
               width: 88,
               height: 88,
               fit: BoxFit.cover,

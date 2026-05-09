@@ -607,7 +607,7 @@ class TicketCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Image.network(
-              ticket.event.imageUrl,
+              ticket.event.imageUrls.isNotEmpty ? ticket.event.imageUrls.first : '',
               width: 88,
               height: 88,
               fit: BoxFit.cover,

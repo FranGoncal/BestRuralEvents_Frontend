@@ -6,7 +6,7 @@ class Event {
   final String location;
   final DateTime startDate;
   final DateTime endDate;
-  final String imageUrl;
+  final List<String> imageUrls;
   final double price;
   final double averageRating;
   final int totalReviews;
@@ -18,7 +18,7 @@ class Event {
     required this.location,
     required this.startDate,
     required this.endDate,
-    required this.imageUrl,
+    required this.imageUrls,
     required this.price,
     required this.averageRating,
     required this.totalReviews,
@@ -30,19 +30,31 @@ class Event {
   factory Event.fromJson(Map<String, dynamic> json) {
     final images = json['images'];
 
-    String imageUrl = '';
+    List<String> imageUrls = [];
 
-    if (images is List && images.isNotEmpty) {
-      final rawUrl = images.first.toString();
+    if (images is List) {
+      imageUrls = images.map((item) {
+        final rawUrl = item.toString();
 
-      if (rawUrl.startsWith('http')) {
-        imageUrl = rawUrl;
-      } else {
-        imageUrl = '${AppConfig.baseUrl}$rawUrl';
-      }
-    } else {
-      imageUrl = json['imageUrl']?.toString() ?? '';
+        if (rawUrl.startsWith('http')) return rawUrl;
+
+        return '${AppConfig.baseUrl}$rawUrl';
+      }).toList();
     }
+
+    if (imageUrls.isEmpty) {
+      final fallback = json['imageUrl']?.toString() ?? '';
+
+      if (fallback.isNotEmpty) {
+        imageUrls = [
+          fallback.startsWith('http')
+              ? fallback
+              : '${AppConfig.baseUrl}$fallback',
+        ];
+      }
+    }
+
+    final imageUrl = imageUrls.isNotEmpty ? imageUrls.first : '';
 
     final parsedStartDate = DateTime.tryParse(
       json['startDate']?.toString() ??
@@ -63,7 +75,7 @@ class Event {
       location: json['location']?.toString() ?? 'Location unavailable',
       startDate: parsedStartDate ?? DateTime.now(),
       endDate: parsedEndDate ?? parsedStartDate ?? DateTime.now(),
-      imageUrl: imageUrl,
+      imageUrls: imageUrls,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
       totalReviews: (json['totalReviews'] as num?)?.toInt() ?? 0,

@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import 'package:best_rural_events_frontend/services/event_service.dart';
 
 class CreateEventPage extends StatefulWidget {
@@ -23,7 +24,6 @@ class CreateEventPage extends StatefulWidget {
 class _CreateEventPageState extends State<CreateEventPage> {
   final _formKey = GlobalKey<FormState>();
 
-
   final EventService _eventService = EventService();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -36,8 +36,10 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
-  XFile? _selectedImage;
-  Uint8List? _selectedImageBytes;
+
+  List<XFile> _selectedImages = [];
+  List<Uint8List> _selectedImageBytes = [];
+
   bool _isSubmitting = false;
 
   @override
@@ -53,7 +55,6 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
   Future<void> _pickDate({required bool isStartDate}) async {
     final now = DateTime.now();
-
     final currentValue = isStartDate ? _selectedStartDate : _selectedEndDate;
 
     final pickedDate = await showDatePicker(
@@ -70,7 +71,8 @@ class _CreateEventPageState extends State<CreateEventPage> {
         _selectedStartDate = pickedDate;
         _startDateController.text = _formatDate(pickedDate);
 
-        if (_selectedEndDate != null && _selectedEndDate!.isBefore(pickedDate)) {
+        if (_selectedEndDate != null &&
+            _selectedEndDate!.isBefore(pickedDate)) {
           _selectedEndDate = null;
           _endDateController.clear();
         }
@@ -81,22 +83,22 @@ class _CreateEventPageState extends State<CreateEventPage> {
     });
   }
 
-  Future<void> _pickImage() async {
-    final picked = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
+  Future<void> _pickImages() async {
+    final pickedImages = await _imagePicker.pickMultiImage(imageQuality: 85);
 
-    if (picked == null) return;
+    if (pickedImages.isEmpty) return;
 
-    Uint8List? bytes;
+    final bytesList = <Uint8List>[];
+
     if (kIsWeb) {
-      bytes = await picked.readAsBytes();
+      for (final image in pickedImages) {
+        bytesList.add(await image.readAsBytes());
+      }
     }
 
     setState(() {
-      _selectedImage = picked;
-      _selectedImageBytes = bytes;
+      _selectedImages = pickedImages;
+      _selectedImageBytes = bytesList;
     });
   }
 
@@ -124,17 +126,26 @@ class _CreateEventPageState extends State<CreateEventPage> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedStartDate == null || _selectedEndDate == null) {
-      _showMessage('Please select start and end dates.', backgroundColor: Colors.red);
+      _showMessage(
+        'Please select start and end dates.',
+        backgroundColor: Colors.red,
+      );
       return;
     }
 
     if (_selectedEndDate!.isBefore(_selectedStartDate!)) {
-      _showMessage('End date cannot be before start date.', backgroundColor: Colors.red);
+      _showMessage(
+        'End date cannot be before start date.',
+        backgroundColor: Colors.red,
+      );
       return;
     }
 
-    if (_selectedImage == null) {
-      _showMessage('Please upload an image.', backgroundColor: Colors.red);
+    if (_selectedImages.isEmpty) {
+      _showMessage(
+        'Please upload at least one image.',
+        backgroundColor: Colors.red,
+      );
       return;
     }
 
@@ -160,7 +171,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
       endDate: _selectedEndDate!,
       price: price,
       description: _descriptionController.text,
-      imageXFile: _selectedImage,
+      imageFiles: _selectedImages,
       imageBytes: _selectedImageBytes,
     );
 
@@ -171,17 +182,44 @@ class _CreateEventPageState extends State<CreateEventPage> {
     });
 
     if (result.success) {
-      _showMessage(
-        result.message,
-        backgroundColor: Colors.green,
-      );
+      _showMessage(result.message, backgroundColor: Colors.green);
       Navigator.pop(context, true);
     } else {
-      _showMessage(
-        result.message,
-        backgroundColor: Colors.red,
-      );
+      _showMessage(result.message, backgroundColor: Colors.red);
     }
+  }
+
+  Widget _buildImagePreview() {
+    if (_selectedImages.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _selectedImages.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: kIsWeb
+                ? Image.memory(
+              _selectedImageBytes[index],
+              width: 120,
+              height: 120,
+              fit: BoxFit.cover,
+            )
+                : Image.file(
+              File(_selectedImages[index].path),
+              width: 120,
+              height: 120,
+              fit: BoxFit.cover,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -277,7 +315,8 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
               TextFormField(
                 controller: _priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
                 decoration: _inputDecoration('Price (€)'),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -305,7 +344,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
               const SizedBox(height: 16),
 
               Text(
-                'Event image',
+                'Event images',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -313,10 +352,10 @@ class _CreateEventPageState extends State<CreateEventPage> {
               const SizedBox(height: 10),
 
               OutlinedButton.icon(
-                onPressed: _pickImage,
+                onPressed: _pickImages,
                 icon: const Icon(Icons.upload_outlined),
                 label: Text(
-                  _selectedImage == null ? 'Upload image' : 'Change image',
+                  _selectedImages.isEmpty ? 'Upload images' : 'Change images',
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: primaryGreen,
@@ -326,32 +365,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
               ),
 
               const SizedBox(height: 12),
-
-              if (_selectedImage != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: kIsWeb
-                      ? (_selectedImageBytes != null
-                      ? Image.memory(
-                    _selectedImageBytes!,
-                    height: 220,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  )
-                      : Container(
-                    height: 220,
-                    color: Colors.grey.shade200,
-                    alignment: Alignment.center,
-                    child: const Text('Could not preview image'),
-                  ))
-                      : Image.file(
-                    File(_selectedImage!.path),
-                    height: 220,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
+              _buildImagePreview(),
               const SizedBox(height: 24),
 
               SizedBox(

@@ -12,6 +12,7 @@ class EventDetailsPage extends StatefulWidget {
   final String token;
   final String userId;
 
+
   const EventDetailsPage({
     super.key,
     required this.event,
@@ -31,6 +32,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
   late Event _event;
 
+  final PageController _imagePageController = PageController();
+
+  int _currentImageIndex = 0;
+
   bool _isFavoriteLoading = true; // loading spinner for favorite
   bool _isFavorite = false; // actual favorite state
 
@@ -43,6 +48,13 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
   // Prevents multiple clicks while request is running
   bool _isTogglingFavorite = false;
+
+
+  @override
+  void dispose() {
+    _imagePageController.dispose();
+    super.dispose();
+  }
 
   //runs once the page opens
   @override
@@ -224,23 +236,14 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.network(
-              _event.imageUrl,
-              width: double.infinity,
-              height: 240,
-              fit: BoxFit.cover,
-              //fallback in case there is no img
-              errorBuilder: (_, __, ___) {
-                return Container(
-                  width: double.infinity,
-                  height: 240,
-                  color: const Color(0xFFF1F1F1),
-                  child: const Icon(
-                    Icons.image_not_supported_outlined,
-                    size: 56,
-                    color: Colors.grey,
-                  ),
-                );
+            _EventImageCarousel(
+              imageUrls: _event.imageUrls,
+              pageController: _imagePageController,
+              currentIndex: _currentImageIndex,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentImageIndex = index;
+                });
               },
             ),
             Padding(
@@ -507,6 +510,201 @@ class _ReviewCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+
+}
+class _EventImageCarousel extends StatelessWidget {
+  final List<String> imageUrls;
+  final PageController pageController;
+  final int currentIndex;
+  final ValueChanged<int> onPageChanged;
+
+  const _EventImageCarousel({
+    required this.imageUrls,
+    required this.pageController,
+    required this.currentIndex,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final validImages = imageUrls.where((url) => url.isNotEmpty).toList();
+
+    if (validImages.isEmpty) {
+      return Container(
+        width: double.infinity,
+        height: 240,
+        color: const Color(0xFFF1F1F1),
+        child: const Icon(
+          Icons.image_not_supported_outlined,
+          size: 56,
+          color: Colors.grey,
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        SizedBox(
+          height: 240,
+          width: double.infinity,
+          child: PageView.builder(
+            controller: pageController,
+            itemCount: validImages.length,
+            onPageChanged: onPageChanged,
+            itemBuilder: (context, index) {
+              final imageUrl = validImages[index];
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => _FullScreenImageViewer(
+                        imageUrls: validImages,
+                        initialIndex: index,
+                      ),
+                    ),
+                  );
+                },
+                child: Image.network(
+                  imageUrl,
+                  width: double.infinity,
+                  height: 240,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) {
+                    return Container(
+                      width: double.infinity,
+                      height: 240,
+                      color: const Color(0xFFF1F1F1),
+                      child: const Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 56,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+
+        if (validImages.length > 1)
+          Positioned(
+            bottom: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.55),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '${currentIndex + 1}/${validImages.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+
+        if (validImages.length > 1)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(validImages.length, (index) {
+                final isActive = index == currentIndex;
+
+                return Container(
+                  width: isActive ? 18 : 7,
+                  height: 7,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                );
+              }),
+            ),
+          ),
+      ],
+    );
+  }
+}
+class _FullScreenImageViewer extends StatefulWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  const _FullScreenImageViewer({
+    required this.imageUrls,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
+  late final PageController _controller;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _controller = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('${_currentIndex + 1}/${widget.imageUrls.length}'),
+      ),
+      body: PageView.builder(
+        controller: _controller,
+        itemCount: widget.imageUrls.length,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        itemBuilder: (context, index) {
+          return InteractiveViewer(
+            child: Center(
+              child: Image.network(
+                widget.imageUrls[index],
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) {
+                  return const Icon(
+                    Icons.image_not_supported_outlined,
+                    size: 64,
+                    color: Colors.white70,
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }
