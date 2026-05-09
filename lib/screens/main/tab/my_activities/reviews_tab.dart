@@ -99,6 +99,20 @@ class _ReviewsTabState extends State<ReviewsTab> {
     }
   }
 
+  String _formatDateRange(DateTime? startDate, DateTime? endDate) {
+    if (startDate == null) return 'Unknown date';
+
+    final start = _formatDate(startDate);
+
+    if (endDate == null) return start;
+
+    final end = _formatDate(endDate);
+
+    if (start == end) return start;
+
+    return '$start - $end';
+  }
+
   void _applyFilters() {
     setState(() {
       _searchQuery = _searchController.text.trim();
@@ -385,9 +399,10 @@ class _ReviewsTabState extends State<ReviewsTab> {
                 padding: const EdgeInsets.only(bottom: 14),
                 child: ReviewCard(
                   review: review,
-                  formattedDate: review.eventDate == null
-                      ? 'Unknown date'
-                      : _formatDate(review.eventDate!),
+                  formattedDate: _formatDateRange(
+                    review.eventStartDate,
+                    review.eventEndDate,
+                  ),
                   onRemove: () => _removeReview(review),
                   onUpdate: (newRating, newComment) {
                     _updateReview(

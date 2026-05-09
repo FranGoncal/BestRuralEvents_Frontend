@@ -1,13 +1,14 @@
 class EventReview {
   final int id;
   final int eventId;
-  final String userId;
+  final int userId;
   final String userName;
   final String eventName;
-  final DateTime? eventDate;
+  final DateTime? eventStartDate;
+  final DateTime? eventEndDate;
   final int rating;
   final String comment;
-  final DateTime createdAt;
+  final DateTime? createdAt;
 
   EventReview({
     required this.id,
@@ -15,45 +16,36 @@ class EventReview {
     required this.userId,
     required this.userName,
     required this.eventName,
-    required this.eventDate,
+    required this.eventStartDate,
+    required this.eventEndDate,
     required this.rating,
     required this.comment,
     required this.createdAt,
   });
 
+  DateTime? get eventDate => eventStartDate; // temporary compatibility
+
   factory EventReview.fromJson(Map<String, dynamic> json) {
     return EventReview(
-      id: json['id'] as int,
-      eventId: json['eventId'] as int,
-      userId: json['userId'].toString(),
-
-      // Add this:
-      userName: json['userName']?.toString() ?? 'User ${json['userId']}',
-
-      eventName: json['eventName']?.toString() ?? 'Event #${json['eventId']}',
-      eventDate: json['eventDate'] == null
-          ? null
-          : DateTime.parse(json['eventDate'].toString()),
-      rating: json['rating'] as int,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      eventId: (json['eventId'] as num?)?.toInt() ?? 0,
+      userId: (json['userId'] as num?)?.toInt() ?? 0,
+      userName: json['userName']?.toString() ?? 'Unknown user',
+      eventName: json['eventName']?.toString() ?? 'Unknown event',
+      eventStartDate: DateTime.tryParse(
+        json['eventStartDate']?.toString() ??
+            json['eventDate']?.toString() ??
+            '',
+      ),
+      eventEndDate: DateTime.tryParse(
+        json['eventEndDate']?.toString() ??
+            json['eventStartDate']?.toString() ??
+            json['eventDate']?.toString() ??
+            '',
+      ),
+      rating: (json['rating'] as num?)?.toInt() ?? 0,
       comment: json['comment']?.toString() ?? '',
-      createdAt: DateTime.parse(json['createdAt'].toString()),
-    );
-  }
-
-  EventReview copyWith({
-    int? rating,
-    String? comment,
-  }) {
-    return EventReview(
-      id: id,
-      eventId: eventId,
-      userId: userId,
-      userName: userName,
-      eventName: eventName,
-      eventDate: eventDate,
-      rating: rating ?? this.rating,
-      comment: comment ?? this.comment,
-      createdAt: createdAt,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
     );
   }
 }

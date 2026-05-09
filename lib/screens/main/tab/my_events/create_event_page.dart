@@ -8,10 +8,12 @@ import 'package:best_rural_events_frontend/services/event_service.dart';
 
 class CreateEventPage extends StatefulWidget {
   final String token;
+  final String userId;
 
   const CreateEventPage({
     super.key,
     required this.token,
+    required this.userId,
   });
 
   @override
@@ -21,16 +23,19 @@ class CreateEventPage extends StatefulWidget {
 class _CreateEventPageState extends State<CreateEventPage> {
   final _formKey = GlobalKey<FormState>();
 
+
   final EventService _eventService = EventService();
   final ImagePicker _imagePicker = ImagePicker();
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _startDateController = TextEditingController();
+  final TextEditingController _endDateController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  DateTime? _selectedDate;
+  DateTime? _selectedStartDate;
+  DateTime? _selectedEndDate;
   XFile? _selectedImage;
   Uint8List? _selectedImageBytes;
   bool _isSubmitting = false;
@@ -39,42 +44,40 @@ class _CreateEventPageState extends State<CreateEventPage> {
   void dispose() {
     _titleController.dispose();
     _locationController.dispose();
-    _dateController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
+  Future<void> _pickDate({required bool isStartDate}) async {
     final now = DateTime.now();
+
+    final currentValue = isStartDate ? _selectedStartDate : _selectedEndDate;
 
     final pickedDate = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? now,
+      initialDate: currentValue ?? now,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(2100),
     );
 
     if (pickedDate == null || !mounted) return;
 
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedDate ?? now),
-    );
-
-    if (pickedTime == null) return;
-
-    final fullDate = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-
     setState(() {
-      _selectedDate = fullDate;
-      _dateController.text = _formatDateTime(fullDate);
+      if (isStartDate) {
+        _selectedStartDate = pickedDate;
+        _startDateController.text = _formatDate(pickedDate);
+
+        if (_selectedEndDate != null && _selectedEndDate!.isBefore(pickedDate)) {
+          _selectedEndDate = null;
+          _endDateController.clear();
+        }
+      } else {
+        _selectedEndDate = pickedDate;
+        _endDateController.text = _formatDate(pickedDate);
+      }
     });
   }
 
@@ -97,14 +100,12 @@ class _CreateEventPageState extends State<CreateEventPage> {
     });
   }
 
-  String _formatDateTime(DateTime date) {
+  String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year.toString();
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
 
-    return '$day/$month/$year $hour:$minute';
+    return '$day/$month/$year';
   }
 
   void _showMessage(String message, {Color? backgroundColor}) {
@@ -122,8 +123,13 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedDate == null) {
-      _showMessage('Please select a date and time.', backgroundColor: Colors.red);
+    if (_selectedStartDate == null || _selectedEndDate == null) {
+      _showMessage('Please select start and end dates.', backgroundColor: Colors.red);
+      return;
+    }
+
+    if (_selectedEndDate!.isBefore(_selectedStartDate!)) {
+      _showMessage('End date cannot be before start date.', backgroundColor: Colors.red);
       return;
     }
 
@@ -147,9 +153,11 @@ class _CreateEventPageState extends State<CreateEventPage> {
 
     final result = await _eventService.createEvent(
       token: widget.token,
+      userId: widget.userId,
       title: _titleController.text,
       location: _locationController.text,
-      date: _selectedDate!,
+      startDate: _selectedStartDate!,
+      endDate: _selectedEndDate!,
       price: price,
       description: _descriptionController.text,
       imageXFile: _selectedImage,
@@ -224,17 +232,42 @@ class _CreateEventPageState extends State<CreateEventPage> {
               const SizedBox(height: 12),
 
               GestureDetector(
-                onTap: _pickDate,
+                onTap: () => _pickDate(isStartDate: true),
                 child: AbsorbPointer(
                   child: TextFormField(
-                    controller: _dateController,
-                    decoration: _inputDecoration('Date and time').copyWith(
+                    controller: _startDateController,
+                    decoration: _inputDecoration('Start date').copyWith(
                       suffixIcon: const Icon(Icons.calendar_today_outlined),
                     ),
-                    validator: (value) {
-                      if (_selectedDate == null) {
-                        return 'Please select a date and time';
+                    validator: (_) {
+                      if (_selectedStartDate == null) {
+                        return 'Please select a start date';
                       }
+                      return null;
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              GestureDetector(
+                onTap: () => _pickDate(isStartDate: false),
+                child: AbsorbPointer(
+                  child: TextFormField(
+                    controller: _endDateController,
+                    decoration: _inputDecoration('End date').copyWith(
+                      suffixIcon: const Icon(Icons.calendar_today_outlined),
+                    ),
+                    validator: (_) {
+                      if (_selectedEndDate == null) {
+                        return 'Please select an end date';
+                      }
+
+                      if (_selectedStartDate != null &&
+                          _selectedEndDate!.isBefore(_selectedStartDate!)) {
+                        return 'End date cannot be before start date';
+                      }
+
                       return null;
                     },
                   ),

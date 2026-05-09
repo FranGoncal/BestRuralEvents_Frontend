@@ -162,6 +162,15 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
+  String _formatDateRange(DateTime startDate, DateTime endDate) {
+    final start = _formatDate(startDate);
+    final end = _formatDate(endDate);
+
+    if (start == end) return start;
+
+    return '$start - $end';
+  }
+
   //Converts DateTime into readable string
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
@@ -332,7 +341,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              _formatDate(_event.date),
+                              _formatDateRange(_event.startDate, _event.endDate),
                               style: const TextStyle(fontSize: 16),
                             ),
                           ],

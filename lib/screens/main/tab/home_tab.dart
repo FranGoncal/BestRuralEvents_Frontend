@@ -49,6 +49,15 @@ class _HomeTabState extends State<HomeTab> {
     ]);
   }
 
+  String _formatDateRange(DateTime startDate, DateTime endDate) {
+    final start = _formatDate(startDate);
+    final end = _formatDate(endDate);
+
+    if (start == end) return start;
+
+    return '$start - $end';
+  }
+
   void _showMessage(String message, {Color? backgroundColor}) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -193,7 +202,7 @@ class _HomeTabState extends State<HomeTab> {
             ..._events.map(
                   (event) => EventCard(
                 event: event,
-                formattedDate: _formatDate(event.date),
+                formattedDate: _formatDateRange(event.startDate, event.endDate),
                 formattedPrice: _formatPrice(event.price),
                 token: widget.token,
                 userId: widget.userId,

@@ -235,7 +235,7 @@ class _MyEventsTabState extends State<MyEventsTab> {
     final created = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CreateEventPage(token: widget.token),
+        builder: (_) => CreateEventPage(token: widget.token, userId: widget.userId),
       ),
     );
 

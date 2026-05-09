@@ -161,6 +161,7 @@ class _TicketsTabState extends State<TicketsTab> {
   Future<void> _showRateDialog(Ticket ticket) async {
     int selectedRating = 5;
     final commentController = TextEditingController();
+    String? commentError;
 
     final submitted = await showDialog<bool>(
       context: context,
@@ -197,8 +198,16 @@ class _TicketsTabState extends State<TicketsTab> {
                       controller: commentController,
                       minLines: 3,
                       maxLines: 5,
+                      onChanged: (_) {
+                        if (commentError != null) {
+                          setDialogState(() {
+                            commentError = null;
+                          });
+                        }
+                      },
                       decoration: InputDecoration(
                         hintText: 'Write your review',
+                        errorText: commentError,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -213,7 +222,18 @@ class _TicketsTabState extends State<TicketsTab> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () {
+                    final comment = commentController.text.trim();
+
+                    if (comment.isEmpty) {
+                      setDialogState(() {
+                        commentError = 'Please write a review comment.';
+                      });
+                      return;
+                    }
+
+                    Navigator.pop(context, true);
+                  },
                   child: const Text('Submit'),
                 ),
               ],
@@ -226,10 +246,6 @@ class _TicketsTabState extends State<TicketsTab> {
     if (submitted != true) return;
 
     final comment = commentController.text.trim();
-    if (comment.isEmpty) {
-      _showMessage('Please write a review comment.', backgroundColor: Colors.red);
-      return;
-    }
 
     final result = await _reviewService.createReview(
       token: widget.token,

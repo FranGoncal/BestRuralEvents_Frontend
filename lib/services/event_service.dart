@@ -768,9 +768,11 @@ class EventService {
 
   Future<CreateEventResult> createEvent({
     required String token,
+    required String userId,
     required String title,
     required String location,
-    required DateTime date,
+    required DateTime startDate,
+    required DateTime endDate,
     required double price,
     String? description,
     XFile? imageXFile,
@@ -783,10 +785,12 @@ class EventService {
 
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
+      request.headers['X-User-Id'] = userId;
 
       request.fields['title'] = title.trim();
       request.fields['location'] = location.trim();
-      request.fields['date'] = date.toIso8601String();
+      request.fields['startDate'] = startDate.toIso8601String().split('T').first;
+      request.fields['endDate'] = endDate.toIso8601String().split('T').first;
       request.fields['price'] = price.toString();
 
       if (description != null && description.trim().isNotEmpty) {
