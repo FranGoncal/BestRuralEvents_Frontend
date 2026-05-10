@@ -65,6 +65,33 @@ class _NotificationsPageState extends State<NotificationsPage> {
       });
     }
   }
+  Future<void> _confirmDeleteAllNotifications() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Clear all notifications?'),
+          content: const Text(
+            'This will remove all your notifications. This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Clear all'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete == true) {
+      await _deleteAllNotifications();
+    }
+  }
 
   Future<void> _deleteNotification(String notificationId) async {
     final result = await _notificationService.deleteNotification(
@@ -78,6 +105,31 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (result.success) {
       setState(() {
         _notifications.removeWhere((n) => n.id == notificationId);
+      });
+
+      _showMessage(
+        result.message,
+        backgroundColor: Colors.green,
+      );
+    } else {
+      _showMessage(
+        result.message,
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+
+  Future<void> _deleteAllNotifications() async {
+    final result = await _notificationService.deleteAllNotifications(
+      token: widget.token,
+      userId: widget.userId,
+    );
+
+    if (!mounted) return;
+
+    if (result.success) {
+      setState(() {
+        _notifications.clear();
       });
 
       _showMessage(
@@ -113,6 +165,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
         backgroundColor: Colors.white,
         foregroundColor: primaryGreen,
         elevation: 0,
+        actions: [
+          if (_notifications.isNotEmpty)
+            IconButton(
+              tooltip: 'Clear all notifications',
+              onPressed: _confirmDeleteAllNotifications,
+              icon: const Icon(Icons.delete_sweep_outlined),
+            ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadNotifications,

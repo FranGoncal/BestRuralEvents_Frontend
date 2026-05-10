@@ -222,4 +222,66 @@ class AuthService {
       );
     }
   }
+
+  Future<AuthResult> getUserById({
+    required String userId,
+    required String token,
+  }) async {
+    final url = Uri.parse('$baseUrl/user/$userId');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      Map<String, dynamic>? decodedBody;
+
+      try {
+        decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        return AuthResult(
+          success: false,
+          message: 'Backend responded, but body is not valid JSON.',
+          statusCode: response.statusCode,
+        );
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (decodedBody['name'] is String &&
+            decodedBody['email'] is String &&
+            decodedBody['id'] != null) {
+          return AuthResult(
+            success: true,
+            message: 'User loaded successfully.',
+            data: decodedBody,
+            statusCode: response.statusCode,
+          );
+        }
+
+        return AuthResult(
+          success: false,
+          message: 'User JSON is not in expected format.',
+          data: decodedBody,
+          statusCode: response.statusCode,
+        );
+      }
+
+      return AuthResult(
+        success: false,
+        message: 'Backend responded with error status ${response.statusCode}.',
+        data: decodedBody,
+        statusCode: response.statusCode,
+      );
+    } catch (e) {
+      return AuthResult(
+        success: false,
+        message: 'Unexpected error loading user: $e',
+      );
+    }
+  }
+
 }

@@ -8,8 +8,9 @@ import 'package:best_rural_events_frontend/services/session_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-// Tab used in the main page for profile
-class ProfileTab extends StatelessWidget {
+import '../../../services/profile_service.dart';
+
+class ProfileTab extends StatefulWidget {
   final String token;
   final String userId;
   final String email;
@@ -21,6 +22,37 @@ class ProfileTab extends StatelessWidget {
     required this.email,
   });
 
+  @override
+  State<ProfileTab> createState() => _ProfileTabState();
+}
+class _ProfileTabState extends State<ProfileTab> {
+  String? name;
+  bool isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final result = await ProfileService().getProfile(
+      token: widget.token,
+      userId: widget.userId,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      if (result.success) {
+        name = result.data?['name']?.toString();
+      } else {
+        name = widget.email.split('@').first;
+      }
+
+      isLoadingProfile = false;
+    });
+  }
   void _showMessage(
       BuildContext context,
       String message, {
@@ -163,7 +195,7 @@ class ProfileTab extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                email.split('@').first,
+                isLoadingProfile ? 'Loading...' : name ?? widget.email.split('@').first,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: primaryGreen,
@@ -171,7 +203,7 @@ class ProfileTab extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                email,
+                widget.email,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[700],
                 ),
@@ -205,13 +237,15 @@ class ProfileTab extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) => EditProfilePage(
-                  token: token,
-                  userId: userId,
+                  token: widget.token,
+                  userId: widget.userId,
                 ),
               ),
             );
 
             if (!context.mounted) return;
+
+            await _loadProfile();
 
             if (updated == true) {
               _showMessage(
@@ -239,8 +273,8 @@ class ProfileTab extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) => ChangePasswordPage(
-                  token: token,
-                  userId: userId,
+                  token: widget.token,
+                  userId: widget.userId,
                 ),
               ),
             );
@@ -264,7 +298,7 @@ class ProfileTab extends StatelessWidget {
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => FaqPage(token: token),
+                builder: (_) => FaqPage(token: widget.token),
               ),
             );
           },
@@ -278,9 +312,9 @@ class ProfileTab extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) => HelpSupportPage(
-                  token: token,
-                  userId: userId,
-                  email: email,
+                  token: widget.token,
+                  userId: widget.userId,
+                  email: widget.email,
                 ),
               ),
             );
