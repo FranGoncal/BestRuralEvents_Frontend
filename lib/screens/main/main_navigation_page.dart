@@ -53,6 +53,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   Future<void> _refreshNotificationBell() async {
     final result = await _notificationService.loadNotificationStatus(
       token: widget.token,
+      userId: widget.userId,
     );
 
     if (!mounted) return;
@@ -78,6 +79,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           MaterialPageRoute(
             builder: (_) => NotificationsPage(
               token: widget.token,
+              userId: widget.userId,
             ),
           ),
         );

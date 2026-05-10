@@ -71,6 +71,7 @@ class _HomeTabState extends State<HomeTab> {
   Future<void> _loadNotifications() async {
     final result = await _notificationService.loadNotificationStatus(
       token: widget.token,
+      userId: widget.userId,
     );
 
     if (!mounted) return;

@@ -1,13 +1,19 @@
+import 'package:best_rural_events_frontend/services/notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'firebase_options.dart';
 import 'screens/auth/login_page.dart';
 import 'services/session_service.dart';
 import 'screens/main/main_navigation_page.dart';
 
+final FlutterLocalNotificationsPlugin localNotifications =
+FlutterLocalNotificationsPlugin();
+
+@pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -18,6 +24,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 // Entry point of the whole Flutter app
 Future<void> main() async {
+
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
@@ -28,6 +35,14 @@ Future<void> main() async {
   FirebaseMessaging.onBackgroundMessage(
     _firebaseMessagingBackgroundHandler,
   );
+
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const initSettings = InitializationSettings(
+    android: androidInit,
+  );
+
+  await localNotifications.initialize(initSettings);
 
   runApp(const BestRuralEventsApp());
 }
@@ -87,23 +102,42 @@ class _SessionDeciderPageState extends State<SessionDeciderPage> {
     debugPrint(token ?? 'NO TOKEN');
     debugPrint('===========================================');
 
-    // TODO: send token to backend if user is already logged in
     final session = await SessionService().getSession();
+
     if (session != null && token != null) {
       final authToken = session['token']!;
       final userId = session['userId']!;
 
-      // call your backend here
-      // await NotificationService().registerDeviceToken(
-      //   authToken: authToken,
-      //   userId: userId,
-      //   fcmToken: token,
-      // );
+      await NotificationService().registerDeviceToken(
+        token: authToken,
+        userId: userId,
+        fcmToken: token,
+      );
     }
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('Foreground message: ${message.notification?.title}');
-      debugPrint('Foreground data: ${message.data}');
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      final title = message.notification?.title ?? 'Notification';
+      final body = message.notification?.body ?? '';
+
+      const androidDetails = AndroidNotificationDetails(
+        'main_notifications',
+        'Main Notifications',
+        channelDescription: 'Notifications for Best Rural Events',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+
+      const notificationDetails = NotificationDetails(
+        android: androidDetails,
+      );
+
+      await localNotifications.show(
+        message.hashCode,
+        title,
+        body,
+        notificationDetails,
+        payload: message.data.toString(),
+      );
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {

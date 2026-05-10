@@ -4,10 +4,12 @@ import '../../../services/notification_service.dart';
 
 class NotificationsPage extends StatefulWidget {
   final String token;
+  final String userId;
 
   const NotificationsPage({
     super.key,
     required this.token,
+    required this.userId,
   });
 
   @override
@@ -45,6 +47,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     final result = await _notificationService.loadNotifications(
       token: widget.token,
+      userId: widget.userId,
     );
 
     if (!mounted) return;
@@ -67,6 +70,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final result = await _notificationService.deleteNotification(
       token: widget.token,
       notificationId: notificationId,
+      userId: widget.userId,
     );
 
     if (!mounted) return;

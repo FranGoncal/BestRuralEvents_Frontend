@@ -4,6 +4,17 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/app_notification.dart';
 
+
+class RegisterDeviceTokenResult {
+  final bool success;
+  final String message;
+
+  RegisterDeviceTokenResult({
+    required this.success,
+    required this.message,
+  });
+}
+
 class NotificationStatusResult {
   final bool success;
   final bool hasUnreadNotifications;
@@ -43,6 +54,7 @@ class NotificationService {
 
   Future<NotificationStatusResult> loadNotificationStatus({
     required String token,
+    required String userId,
   }) async {
     try {
       final url = Uri.parse('$_baseUrl/notification/status');
@@ -53,6 +65,7 @@ class NotificationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
         },
       );
 
@@ -86,8 +99,97 @@ class NotificationService {
     }
   }
 
+  Future<DeleteNotificationResult> deleteAllNotifications({
+    required String token,
+    required String userId,
+  }) async {
+    try {
+      final url = Uri.parse('$_baseUrl/notification');
+      debugPrint('DELETE ALL NOTIFICATIONS -> sending DELETE to $url');
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
+        },
+      );
+
+      debugPrint('DELETE ALL NOTIFICATIONS -> status code: ${response.statusCode}');
+      debugPrint('DELETE ALL NOTIFICATIONS -> body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return DeleteNotificationResult(
+          success: true,
+          message: 'All notifications deleted successfully.',
+        );
+      }
+
+      return DeleteNotificationResult(
+        success: false,
+        message: 'Failed to delete all notifications. Status: ${response.statusCode}',
+      );
+    } catch (e) {
+      debugPrint('DELETE ALL NOTIFICATIONS -> exception: $e');
+
+      return DeleteNotificationResult(
+        success: false,
+        message: 'Error deleting all notifications: $e',
+      );
+    }
+  }
+
+  Future<RegisterDeviceTokenResult> registerDeviceToken({
+    required String token,
+    required String userId,
+    required String fcmToken,
+  }) async {
+    try {
+      final url = Uri.parse('$_baseUrl/notification/device-token');
+      debugPrint('REGISTER FCM TOKEN -> sending POST to $url');
+      debugPrint('REGISTER FCM TOKEN -> token: $fcmToken');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
+        },
+        body: jsonEncode({
+          'token': fcmToken,
+          'platform': 'ANDROID',
+        }),
+      );
+
+      debugPrint('REGISTER FCM TOKEN -> status code: ${response.statusCode}');
+      debugPrint('REGISTER FCM TOKEN -> body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return RegisterDeviceTokenResult(
+          success: true,
+          message: 'Device token registered successfully.',
+        );
+      }
+
+      return RegisterDeviceTokenResult(
+        success: false,
+        message: 'Failed to register device token. Status: ${response.statusCode}',
+      );
+    } catch (e) {
+      debugPrint('REGISTER FCM TOKEN -> exception: $e');
+
+      return RegisterDeviceTokenResult(
+        success: false,
+        message: 'Error registering device token: $e',
+      );
+    }
+  }
+
   Future<NotificationListResult> loadNotifications({
     required String token,
+    required String userId,
   }) async {
     try {
       final url = Uri.parse('$_baseUrl/notification');
@@ -98,6 +200,7 @@ class NotificationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
         },
       );
 
@@ -137,6 +240,7 @@ class NotificationService {
   Future<DeleteNotificationResult> deleteNotification({
     required String token,
     required String notificationId,
+    required String userId,
   }) async {
     try {
       final url = Uri.parse('$_baseUrl/notification/$notificationId');
@@ -147,6 +251,7 @@ class NotificationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
         },
       );
 

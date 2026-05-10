@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import 'signup_page.dart';
 import '../main/tab/home_tab.dart';
 import '../../services/session_service.dart';
@@ -109,11 +110,11 @@ class _LoginPageState extends State<LoginPage> {
       debugPrint('===========================================');
 
       if (fcmToken != null) {
-        // await NotificationService().registerDeviceToken(
-        //   authToken: token,
-        //   userId: userId,
-        //   fcmToken: fcmToken,
-        // );
+        await NotificationService().registerDeviceToken(
+          userId: userId,
+          fcmToken: fcmToken,
+          token: token,
+         );
       }
 
 
