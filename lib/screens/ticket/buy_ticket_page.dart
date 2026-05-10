@@ -3,9 +3,7 @@ import '../../models/event.dart';
 import '../../models/payment_method.dart';
 import '../../services/payment_methods_storage_service.dart';
 import '../../services/payment_service.dart';
-import '../../services/ticket_service.dart';
 import 'package:flutter/services.dart';
-
 
 class ExpiryDateInputFormatter extends TextInputFormatter {
   @override
@@ -31,19 +29,16 @@ class ExpiryDateInputFormatter extends TextInputFormatter {
   }
 }
 
-
 class BuyTicketPage extends StatefulWidget {
   final Event event;
   final String token;
-  final String? initialEmail;
-  final String? initialName;
+  final String userId;
 
   const BuyTicketPage({
     super.key,
     required this.event,
     required this.token,
-    this.initialEmail,
-    this.initialName,
+    required this.userId,
   });
 
   @override
@@ -51,57 +46,37 @@ class BuyTicketPage extends StatefulWidget {
 }
 
 class _BuyTicketPageState extends State<BuyTicketPage> {
-  final TicketService _ticketService = TicketService();
   final PaymentService _paymentService = PaymentService();
   final PaymentMethodsStorageService _paymentMethodsStorageService =
   PaymentMethodsStorageService();
 
-  late final TextEditingController _nameController;
-  late final TextEditingController _emailController;
-
   final _formKey = GlobalKey<FormState>();
+  bool get _isPerDay => widget.event.ticketMode == 'PER_DAY';
 
   int _quantity = 1;
-  bool _useMyInformation = true;
   bool _isSubmitting = false;
   bool _isLoadingPaymentMethods = true;
 
   List<PaymentMethod> _savedPaymentMethods = [];
   String? _selectedPaymentMethodId;
 
+  late final List<DateTime> _availableDays;
+  final Set<DateTime> _selectedDays = {};
+
   @override
   void initState() {
     super.initState();
 
-    _nameController = TextEditingController(
-      text: widget.initialName?.trim() ?? '',
+    _availableDays = _generateEventDays(
+      widget.event.startDate,
+      widget.event.endDate,
     );
-    _emailController = TextEditingController(
-      text: widget.initialEmail?.trim() ?? '',
-    );
+
+    if (widget.event.ticketMode == 'PER_DAY' && _availableDays.isNotEmpty) {
+      _selectedDays.add(_dateOnly(_availableDays.first));
+    }
 
     _loadPaymentMethods();
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  void _applyMyInformation(bool useMine) {
-    setState(() {
-      _useMyInformation = useMine;
-
-      if (useMine) {
-        _nameController.text = widget.initialName?.trim() ?? '';
-        _emailController.text = widget.initialEmail?.trim() ?? '';
-      } else {
-        _nameController.clear();
-        _emailController.clear();
-      }
-    });
   }
 
   Future<void> _loadPaymentMethods() async {
@@ -120,9 +95,32 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
     });
   }
 
+  DateTime _dateOnly(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  List<DateTime> _generateEventDays(DateTime startDate, DateTime endDate) {
+    final start = _dateOnly(startDate);
+    final end = _dateOnly(endDate);
+
+    final days = <DateTime>[];
+    var current = start;
+
+    while (!current.isAfter(end)) {
+      days.add(current);
+      current = current.add(const Duration(days: 1));
+    }
+
+    return days;
+  }
+
+  double _totalAmount() {
+    final dayCount = _isPerDay ? _selectedDays.length : 1;
+    return widget.event.price * _quantity * dayCount;
+  }
+
   int? _parseExpiryMonth(String value) {
-    final cleaned = value.trim();
-    final parts = cleaned.split('/');
+    final parts = value.trim().split('/');
     if (parts.length != 2) return null;
 
     final month = int.tryParse(parts[0]);
@@ -132,8 +130,7 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
   }
 
   int? _parseExpiryYear(String value) {
-    final cleaned = value.trim();
-    final parts = cleaned.split('/');
+    final parts = value.trim().split('/');
     if (parts.length != 2) return null;
 
     final yy = int.tryParse(parts[1]);
@@ -225,9 +222,7 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                         validator: (value) {
                           final normalized = (value ?? '').replaceAll(' ', '');
                           if (normalized.isEmpty) return 'Enter the card number';
-                          if (normalized.length < 12) {
-                            return 'Invalid card number';
-                          }
+                          if (normalized.length < 12) return 'Invalid card number';
                           return null;
                         },
                       ),
@@ -251,8 +246,7 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                               ),
                               validator: (value) {
                                 final text = value?.trim() ?? '';
-                                final regex = RegExp(r'^\d{2}/\d{2}$');
-                                if (!regex.hasMatch(text)) {
+                                if (!RegExp(r'^\d{2}/\d{2}$').hasMatch(text)) {
                                   return 'Use MM/YY';
                                 }
 
@@ -274,7 +268,8 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                               keyboardType: TextInputType.number,
                               obscureText: true,
                               maxLength: 4,
-                              maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                              maxLengthEnforcement:
+                              MaxLengthEnforcement.enforced,
                               inputFormatters: [
                                 FilteringTextInputFormatter.digitsOnly,
                                 LengthLimitingTextInputFormatter(4),
@@ -289,8 +284,7 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                               ),
                               validator: (value) {
                                 final text = value?.trim() ?? '';
-                                final regex = RegExp(r'^\d{3,4}$');
-                                if (!regex.hasMatch(text)) {
+                                if (!RegExp(r'^\d{3,4}$').hasMatch(text)) {
                                   return '3 or 4 digits';
                                 }
                                 return null;
@@ -319,19 +313,18 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                             if (!formKey.currentState!.validate()) return;
 
                             final cardNumber =
-                            cardNumberController.text.trim().replaceAll(' ', '');
+                            cardNumberController.text.trim();
                             final expiry = expiryController.text.trim();
 
-                            final month = _parseExpiryMonth(expiry)!;
-                            final year = _parseExpiryYear(expiry)!;
-
                             final method = PaymentMethod(
-                              id: DateTime.now().millisecondsSinceEpoch.toString(),
+                              id: DateTime.now()
+                                  .millisecondsSinceEpoch
+                                  .toString(),
                               cardName: cardNameController.text.trim(),
                               cardNumberMasked: _maskCardNumber(cardNumber),
                               brand: _detectCardBrand(cardNumber),
-                              expiryMonth: month,
-                              expiryYear: year,
+                              expiryMonth: _parseExpiryMonth(expiry)!,
+                              expiryYear: _parseExpiryYear(expiry)!,
                               cvv: cvvController.text.trim(),
                               isDefault: saveAsDefault,
                             );
@@ -404,12 +397,12 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                           Navigator.pop(context);
                           await _loadPaymentMethods();
                         },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(
                             value: 'default',
                             child: Text('Set as default'),
                           ),
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'delete',
                             child: Text('Delete'),
                           ),
@@ -426,8 +419,6 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
 
     await _loadPaymentMethods();
   }
-
-  double _totalAmount() => widget.event.price * _quantity;
 
   String _detectCardBrand(String number) {
     final normalized = number.replaceAll(' ', '');
@@ -463,97 +454,107 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
     return '$day/$month/$year';
   }
 
+  String _formatDateRange(DateTime startDate, DateTime endDate) {
+    final start = _formatDate(startDate);
+    final end = _formatDate(endDate);
+
+    if (start == end) return start;
+    return '$start - $end';
+  }
+
+  String _formatApiDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$year-$month-$day';
+  }
+
   String _formatPrice(double price) {
     if (price == 0) return 'Free';
     return '€${price.toStringAsFixed(2)}';
   }
 
   String _formatTotal() {
-    final total = widget.event.price * _quantity;
+    final total = _totalAmount();
     if (total == 0) return 'Free';
     return '€${total.toStringAsFixed(2)}';
   }
 
-  Widget _buildBuyerInformationSection() {
+  Widget _buildDaySelectionSection() {
     const primaryGreen = Color(0xFF2E7D32);
+    const lightGray = Color(0xFFE0E0E0);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Buyer information',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: primaryGreen,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Use my information'),
-          subtitle: const Text(
-            'Turn on if you are buying for yourself. Turn off if you are buying for someone else.',
-          ),
-          value: _useMyInformation,
-          onChanged: _applyMyInformation,
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _nameController,
-          enabled: !_useMyInformation,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(
-            labelText: 'Full name',
-            hintText: _useMyInformation && (widget.initialName?.trim().isEmpty ?? true)
-                ? 'No saved name available'
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          validator: (value) {
-            if (_useMyInformation) return null;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: lightGray),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: FormField<Set<DateTime>>(
+        validator: (_) {
+          if (_selectedDays.isEmpty) {
+            return 'Please select at least one day';
+          }
+          return null;
+        },
+        builder: (field) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Select days',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Choose at least one day between ${_formatDateRange(widget.event.startDate, widget.event.endDate)}.',
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _availableDays.map((day) {
+                  final normalizedDay = _dateOnly(day);
+                  final selected = _selectedDays.contains(normalizedDay);
 
-            final text = value?.trim() ?? '';
-            if (text.isEmpty) {
-              return 'Please enter the buyer name';
-            }
-            if (text.length < 2) {
-              return 'Name is too short';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 14),
-        TextFormField(
-          controller: _emailController,
-          enabled: !_useMyInformation,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            labelText: 'Email',
-            hintText: _useMyInformation && (widget.initialEmail?.trim().isEmpty ?? true)
-                ? 'No saved email available'
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          validator: (value) {
-            if (_useMyInformation) return null;
+                  return FilterChip(
+                    label: Text(_formatDate(day)),
+                    selected: selected,
+                    selectedColor: primaryGreen.withOpacity(0.18),
+                    checkmarkColor: primaryGreen,
+                    side: BorderSide(
+                      color: selected ? primaryGreen : lightGray,
+                    ),
+                    onSelected: (value) {
+                      setState(() {
+                        if (value) {
+                          _selectedDays.add(normalizedDay);
+                        } else {
+                          _selectedDays.remove(normalizedDay);
+                        }
+                      });
 
-            final text = value?.trim() ?? '';
-            if (text.isEmpty) {
-              return 'Please enter the buyer email';
-            }
-            final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-            if (!emailRegex.hasMatch(text)) {
-              return 'Please enter a valid email';
-            }
-            return null;
-          },
-        ),
-      ],
+                      field.didChange(_selectedDays);
+                    },
+                  );
+                }).toList(),
+              ),
+              if (field.hasError) ...[
+                const SizedBox(height: 8),
+                Text(
+                  field.errorText!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -575,10 +576,7 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
             children: [
               const Text(
                 'Payment method',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               TextButton(
@@ -652,6 +650,16 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
+    if (_isPerDay && _selectedDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select at least one day'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_totalAmount() > 0 && _selectedPaymentMethod == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -667,26 +675,28 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
     });
 
     final totalAmount = _totalAmount();
-    String? paymentReference;
+
+    final sortedSelectedDays = _selectedDays.toList()
+      ..sort((a, b) => a.compareTo(b));
 
     if (totalAmount > 0) {
       final paymentResult = await _paymentService.processPayment(
         token: widget.token,
+        userId: widget.userId,
         eventId: widget.event.id,
         quantity: _quantity,
         amount: totalAmount,
-        customerName: _nameController.text.trim(),
-        customerEmail: _emailController.text.trim(),
         paymentMethodId: _selectedPaymentMethod!.id,
+        selectedDays: _isPerDay ? sortedSelectedDays : null,
       );
 
       if (!mounted) return;
 
-      if (!paymentResult.success) {
-        setState(() {
-          _isSubmitting = false;
-        });
+      setState(() {
+        _isSubmitting = false;
+      });
 
+      if (!paymentResult.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(paymentResult.message),
@@ -696,35 +706,12 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
         return;
       }
 
-      paymentReference = paymentResult.paymentReference;
-    }
-
-    final ticketResult = await _ticketService.bookTicket(
-      token: widget.token,
-      eventId: widget.event.id,
-      quantity: _quantity,
-      customerName: _nameController.text.trim(),
-      customerEmail: _emailController.text.trim(),
-      paymentReference: paymentReference,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _isSubmitting = false;
-    });
-
-    if (ticketResult.success) {
       await showDialog(
         context: context,
         builder: (context) {
           return AlertDialog(
             title: const Text('Booking confirmed'),
-            content: Text(
-              ticketResult.bookingReference != null
-                  ? 'Your booking was completed successfully.\n\nReference: ${ticketResult.bookingReference}'
-                  : 'Your booking was completed successfully.',
-            ),
+            content: Text('Your booking was completed successfully.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -737,14 +724,12 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
 
       if (!mounted) return;
       Navigator.pop(context, true);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ticketResult.message),
-          backgroundColor: Colors.red,
-        ),
-      );
+      return;
     }
+
+    setState(() {
+      _isSubmitting = false;
+    });
   }
 
   @override
@@ -788,7 +773,9 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                           top: Radius.circular(18),
                         ),
                         child: Image.network(
-                          widget.event.imageUrls.isNotEmpty ? widget.event.imageUrls.first : '',
+                          widget.event.imageUrls.isNotEmpty
+                              ? widget.event.imageUrls.first
+                              : '',
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -839,7 +826,14 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                                   color: primaryGreen,
                                 ),
                                 const SizedBox(width: 8),
-                                Text(_formatDate(widget.event.date)),
+                                Expanded(
+                                  child: Text(
+                                    _formatDateRange(
+                                      widget.event.startDate,
+                                      widget.event.endDate,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -852,7 +846,9 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  _formatPrice(widget.event.price),
+                                  _isPerDay
+                                      ? '${_formatPrice(widget.event.price)} / day / person'
+                                      : '${_formatPrice(widget.event.price)} / person',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -865,7 +861,9 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 24),
+
                 Text(
                   'Ticket details',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -874,6 +872,12 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                if (_isPerDay) ...[
+                  _buildDaySelectionSection(),
+                  const SizedBox(height: 16),
+                ],
+
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -886,7 +890,7 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                       Row(
                         children: [
                           const Text(
-                            'Quantity',
+                            'People',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -923,9 +927,27 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                       const Divider(height: 24),
                       Row(
                         children: [
-                          const Text('Price per ticket'),
+                          const Text('Price per day/person'),
                           const Spacer(),
                           Text(_formatPrice(widget.event.price)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      if (_isPerDay) ...[
+                        Row(
+                          children: [
+                            const Text('Selected days'),
+                            const Spacer(),
+                            Text('${_selectedDays.length}'),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      Row(
+                        children: [
+                          const Text('People'),
+                          const Spacer(),
+                          Text('$_quantity'),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -952,9 +974,9 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 24),
-                _buildBuyerInformationSection(),
-                const SizedBox(height: 28),
+
                 Text(
                   'Payment',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -964,7 +986,9 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                 ),
                 const SizedBox(height: 12),
                 _buildPaymentMethodSection(),
+
                 const SizedBox(height: 28),
+
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -987,9 +1011,9 @@ class _BuyTicketPageState extends State<BuyTicketPage> {
                       ),
                     )
                         : Text(
-                      widget.event.price == 0
+                      _totalAmount() == 0
                           ? 'Reserve spot'
-                          : 'Pay and confirm',
+                          : 'Pay ${_formatTotal()}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

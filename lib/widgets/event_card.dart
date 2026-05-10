@@ -20,6 +20,22 @@ class EventCard extends StatelessWidget {
     required this.userId,
   });
 
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$day/$month/$year';
+  }
+
+  String _formatDateRange(DateTime startDate, DateTime endDate) {
+    final start = _formatDate(startDate);
+    final end = _formatDate(endDate);
+
+    if (start == end) return start;
+
+    return '$start - $end';
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF2E7D32);
@@ -89,7 +105,11 @@ class EventCard extends StatelessWidget {
                     const Icon(Icons.calendar_today_outlined,
                         size: 18, color: primaryGreen),
                     const SizedBox(width: 6),
-                    Expanded(child: Text(formattedDate)),
+                    Expanded(
+                      child: Text(
+                        _formatDateRange(event.startDate, event.endDate),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),

@@ -64,6 +64,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     _loadExtraData();
   }
 
+
   //used to load data from different resources
   Future<void> _loadExtraData() async {
     await _loadEventDetails();
@@ -398,6 +399,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             builder: (_) => BuyTicketPage(
                               event: _event,
                               token: widget.token,
+                              userId: widget.userId,
                             ),
                           ),
                         );

@@ -25,12 +25,12 @@ class PaymentService {
 
   Future<PaymentResult> processPayment({
     required String token,
+    required String userId,
     required int eventId,
     required int quantity,
     required double amount,
-    required String customerName,
-    required String customerEmail,
     required String paymentMethodId,
+    required List<DateTime>? selectedDays,
   }) async {
     final url = Uri.parse('$baseUrl/payment');
 
@@ -41,14 +41,20 @@ class PaymentService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
         },
         body: jsonEncode({
           'eventId': eventId,
           'quantity': quantity,
           'amount': amount,
-          'customerName': customerName,
-          'customerEmail': customerEmail,
           'paymentMethodId': paymentMethodId,
+          if (selectedDays != null)
+            'selectedDays': selectedDays.map((d) {
+              final year = d.year.toString().padLeft(4, '0');
+              final month = d.month.toString().padLeft(2, '0');
+              final day = d.day.toString().padLeft(2, '0');
+              return '$year-$month-$day';
+            }).toList(),
         }),
       )
           .timeout(const Duration(seconds: 12));

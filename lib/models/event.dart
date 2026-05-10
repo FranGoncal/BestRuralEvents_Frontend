@@ -11,6 +11,7 @@ class Event {
   final double averageRating;
   final int totalReviews;
   final String? description;
+  final String ticketMode;
 
   Event({
     required this.id,
@@ -23,6 +24,7 @@ class Event {
     required this.averageRating,
     required this.totalReviews,
     this.description,
+    required this.ticketMode,
   });
 
   DateTime get date => startDate; // temporary compatibility
@@ -80,6 +82,7 @@ class Event {
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
       totalReviews: (json['totalReviews'] as num?)?.toInt() ?? 0,
       description: json['description']?.toString(),
+      ticketMode: json['ticketMode']?.toString() ?? 'EVENT_PASS',
     );
   }
 }

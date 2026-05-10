@@ -72,6 +72,7 @@ class Ticket {
       averageRating: 0.0,
       totalReviews: 0,
       description: null,
+      ticketMode: '',
     );
   }
 }
