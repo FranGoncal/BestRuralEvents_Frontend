@@ -34,6 +34,16 @@ class _CreateEventPageState extends State<CreateEventPage> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
+  final TextEditingController _capacityController = TextEditingController();
+  final TextEditingController _refundDeadlineDaysController =
+  TextEditingController();
+  final TextEditingController _refundPolicyController = TextEditingController();
+
+  String _ticketMode = 'EVENT_PASS';
+  bool _refundable = false;
+
+  final Map<String, TextEditingController> _dailyCapacityControllers = {};
+
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
 
@@ -50,6 +60,14 @@ class _CreateEventPageState extends State<CreateEventPage> {
     _endDateController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
+
+    _capacityController.dispose();
+    _refundDeadlineDaysController.dispose();
+    _refundPolicyController.dispose();
+
+    for (final controller in _dailyCapacityControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -84,7 +102,7 @@ class _CreateEventPageState extends State<CreateEventPage> {
   }
 
   Future<void> _pickImages() async {
-    final pickedImages = await _imagePicker.pickMultiImage(imageQuality: 85);
+    final pickedImages = await _imagePicker.pickMultiImage(imageQuality: 70);
 
     if (pickedImages.isEmpty) return;
 
@@ -158,6 +176,33 @@ class _CreateEventPageState extends State<CreateEventPage> {
       return;
     }
 
+    final capacity = _ticketMode == 'EVENT_PASS'
+        ? int.tryParse(_capacityController.text.trim())
+        : null;
+
+    final dailyCapacityDates = <DateTime>[];
+    final dailyCapacityValues = <int>[];
+
+    if (_ticketMode == 'PER_DAY') {
+      for (final day in _eventDays()) {
+        final key = _apiDate(day);
+        final value = int.tryParse(
+          _dailyCapacityControllers[key]?.text.trim() ?? '',
+        );
+
+        if (value == null || value < 1) {
+          _showMessage(
+            'Please enter valid capacity for every day.',
+            backgroundColor: Colors.red,
+          );
+          return;
+        }
+
+        dailyCapacityDates.add(day);
+        dailyCapacityValues.add(value);
+      }
+    }
+
     setState(() {
       _isSubmitting = true;
     });
@@ -173,6 +218,15 @@ class _CreateEventPageState extends State<CreateEventPage> {
       description: _descriptionController.text,
       imageFiles: _selectedImages,
       imageBytes: _selectedImageBytes,
+      ticketMode: _ticketMode,
+      capacity: capacity,
+      dailyCapacityDates: dailyCapacityDates,
+      dailyCapacityValues: dailyCapacityValues,
+      refundable: _refundable,
+      refundDeadlineDays: _refundable
+          ? int.tryParse(_refundDeadlineDaysController.text.trim())
+          : null,
+      refundPolicy: _refundable ? _refundPolicyController.text.trim() : null,
     );
 
     if (!mounted) return;
@@ -219,6 +273,189 @@ class _CreateEventPageState extends State<CreateEventPage> {
           );
         },
       ),
+    );
+  }
+
+  String _apiDate(DateTime date) {
+    return date.toIso8601String().split('T').first;
+  }
+
+  List<DateTime> _eventDays() {
+    if (_selectedStartDate == null || _selectedEndDate == null) return [];
+
+    final days = <DateTime>[];
+
+    var current = DateTime(
+      _selectedStartDate!.year,
+      _selectedStartDate!.month,
+      _selectedStartDate!.day,
+    );
+
+    final end = DateTime(
+      _selectedEndDate!.year,
+      _selectedEndDate!.month,
+      _selectedEndDate!.day,
+    );
+
+    while (!current.isAfter(end)) {
+      days.add(current);
+      current = current.add(const Duration(days: 1));
+    }
+
+    return days;
+  }
+
+  Widget _buildTicketSettings({required bool allowRefundSettings}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Ticket settings',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        DropdownButtonFormField<String>(
+          value: _ticketMode,
+          decoration: _inputDecoration('Ticket type'),
+          items: const [
+            DropdownMenuItem(
+              value: 'EVENT_PASS',
+              child: Text('Event pass'),
+            ),
+            DropdownMenuItem(
+              value: 'PER_DAY',
+              child: Text('Per-day tickets'),
+            ),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+
+            setState(() {
+              _ticketMode = value;
+            });
+          },
+        ),
+
+        const SizedBox(height: 12),
+
+        if (_ticketMode == 'EVENT_PASS')
+          TextFormField(
+            controller: _capacityController,
+            keyboardType: TextInputType.number,
+            decoration: _inputDecoration('Total capacity'),
+            validator: (value) {
+              final parsed = int.tryParse(value?.trim() ?? '');
+
+              if (parsed == null || parsed < 1) {
+                return 'Capacity must be at least 1';
+              }
+
+              return null;
+            },
+          ),
+
+        if (_ticketMode == 'PER_DAY') ...[
+          Text(
+            'Capacity per day',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          if (_eventDays().isEmpty)
+            Text(
+              'Select start and end dates first.',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+
+          ..._eventDays().map((day) {
+            final key = _apiDate(day);
+
+            _dailyCapacityControllers.putIfAbsent(
+              key,
+                  () => TextEditingController(),
+            );
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: TextFormField(
+                controller: _dailyCapacityControllers[key],
+                keyboardType: TextInputType.number,
+                decoration: _inputDecoration(
+                  'Capacity for ${_formatDate(day)}',
+                ),
+                validator: (value) {
+                  final parsed = int.tryParse(value?.trim() ?? '');
+
+                  if (parsed == null || parsed < 1) {
+                    return 'Capacity must be at least 1';
+                  }
+
+                  return null;
+                },
+              ),
+            );
+          }),
+        ],
+
+        if (allowRefundSettings) ...[
+          const SizedBox(height: 16),
+
+          SwitchListTile(
+            value: _refundable,
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Refundable event'),
+            subtitle: const Text('Allow users to request refunds'),
+            onChanged: (value) {
+              setState(() {
+                _refundable = value;
+              });
+            },
+          ),
+
+          if (_refundable) ...[
+            const SizedBox(height: 12),
+
+            TextFormField(
+              controller: _refundDeadlineDaysController,
+              keyboardType: TextInputType.number,
+              decoration: _inputDecoration('Refund deadline days'),
+              validator: (value) {
+                if (!_refundable) return null;
+
+                final parsed = int.tryParse(value?.trim() ?? '');
+
+                if (parsed == null || parsed < 0) {
+                  return 'Enter a valid number of days';
+                }
+
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            TextFormField(
+              controller: _refundPolicyController,
+              maxLines: 4,
+              decoration: _inputDecoration('Refund policy'),
+              validator: (value) {
+                if (!_refundable) return null;
+
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please describe the refund policy';
+                }
+
+                return null;
+              },
+            ),
+          ],
+        ],
+      ],
     );
   }
 
@@ -341,6 +578,11 @@ class _CreateEventPageState extends State<CreateEventPage> {
                 maxLines: 5,
                 decoration: _inputDecoration('Description (optional)'),
               ),
+
+              const SizedBox(height: 16),
+
+              _buildTicketSettings(allowRefundSettings: true),
+
               const SizedBox(height: 16),
 
               Text(

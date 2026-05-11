@@ -48,6 +48,7 @@ class _EditEventPageState extends State<EditEventPage> {
   void initState() {
     super.initState();
 
+
     _selectedStartDate = widget.event.startDate;
     _selectedEndDate = widget.event.endDate;
 
@@ -77,6 +78,7 @@ class _EditEventPageState extends State<EditEventPage> {
     _endDateController.dispose();
     _priceController.dispose();
     _descriptionController.dispose();
+
     super.dispose();
   }
 
@@ -112,7 +114,7 @@ class _EditEventPageState extends State<EditEventPage> {
 
   Future<void> _pickImages() async {
     final pickedImages = await _imagePicker.pickMultiImage(
-      imageQuality: 85,
+      imageQuality: 70,
     );
 
     if (pickedImages.isEmpty) return;
@@ -179,6 +181,7 @@ class _EditEventPageState extends State<EditEventPage> {
       return;
     }
 
+
     setState(() {
       _isSubmitting = true;
     });
@@ -216,6 +219,7 @@ class _EditEventPageState extends State<EditEventPage> {
       );
     }
   }
+
 
   Widget _buildImagePreview() {
     final existingImages = widget.event.imageUrls;
@@ -297,6 +301,7 @@ class _EditEventPageState extends State<EditEventPage> {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -417,6 +422,7 @@ class _EditEventPageState extends State<EditEventPage> {
                 maxLines: 5,
                 decoration: _inputDecoration('Description (optional)'),
               ),
+
               const SizedBox(height: 16),
 
               Text(

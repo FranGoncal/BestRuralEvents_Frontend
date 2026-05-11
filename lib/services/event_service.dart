@@ -777,6 +777,13 @@ class EventService {
     String? description,
     required List<XFile> imageFiles,
     required List<Uint8List> imageBytes,
+    required String ticketMode,
+    int? capacity,
+    List<DateTime> dailyCapacityDates = const [],
+    List<int> dailyCapacityValues = const [],
+    required bool refundable,
+    int? refundDeadlineDays,
+    String? refundPolicy,
   }) async {
     final url = Uri.parse('$baseUrl/events');
 
@@ -792,6 +799,32 @@ class EventService {
       request.fields['startDate'] = startDate.toIso8601String().split('T').first;
       request.fields['endDate'] = endDate.toIso8601String().split('T').first;
       request.fields['price'] = price.toString();
+
+      request.fields['ticketMode'] = ticketMode;
+      request.fields['refundable'] = refundable.toString();
+
+      if (ticketMode == 'EVENT_PASS' && capacity != null) {
+        request.fields['capacity'] = capacity.toString();
+      }
+
+      if (ticketMode == 'PER_DAY') {
+        request.fields['dailyCapacityDates'] = dailyCapacityDates
+            .map((date) => date.toIso8601String().split('T').first)
+            .join(',');
+
+        request.fields['dailyCapacityValues'] =
+            dailyCapacityValues.map((value) => value.toString()).join(',');
+      }
+
+      if (refundable) {
+        if (refundDeadlineDays != null) {
+          request.fields['refundDeadlineDays'] = refundDeadlineDays.toString();
+        }
+
+        if (refundPolicy != null && refundPolicy.trim().isNotEmpty) {
+          request.fields['refundPolicy'] = refundPolicy.trim();
+        }
+      }
 
       if (description != null && description.trim().isNotEmpty) {
         request.fields['description'] = description.trim();

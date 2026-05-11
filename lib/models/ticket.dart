@@ -73,6 +73,9 @@ class Ticket {
       totalReviews: 0,
       description: null,
       ticketMode: '',
+      capacity: 0,
+      dailyCapacities: [],
+      refundable: false,
     );
   }
 }
