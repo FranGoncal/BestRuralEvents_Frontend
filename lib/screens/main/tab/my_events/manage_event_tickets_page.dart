@@ -57,6 +57,7 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
     final result = await _ticketService.getEventTickets(
       token: widget.token,
       eventId: widget.event.id,
+      userId: widget.userId,
     );
 
     if (!mounted) return;

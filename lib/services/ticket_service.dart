@@ -324,6 +324,7 @@ class TicketService {
   Future<EventTicketsResult> getEventTickets({
     required String token,
     required int eventId,
+    required String userId,
   }) async {
     final url = Uri.parse('$baseUrl/tickets/event/$eventId');
 
@@ -333,6 +334,7 @@ class TicketService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
         },
       ).timeout(const Duration(seconds: 8));
 
