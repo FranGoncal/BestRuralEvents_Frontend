@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import '../config/app_config.dart';
 import '../models/event.dart';
 import '../models/event_review.dart';
@@ -572,10 +573,13 @@ class EventService {
       queryParameters['activityType'] = activityType.trim();
     }
     if (startDate != null) {
-      queryParameters['startDate'] = startDate.toIso8601String();
+      queryParameters['startDate'] =
+          DateFormat('yyyy-MM-dd').format(startDate);
     }
+
     if (endDate != null) {
-      queryParameters['endDate'] = endDate.toIso8601String();
+      queryParameters['endDate'] =
+          DateFormat('yyyy-MM-dd').format(endDate);
     }
 
     final url = Uri.parse('$baseUrl/events/search')

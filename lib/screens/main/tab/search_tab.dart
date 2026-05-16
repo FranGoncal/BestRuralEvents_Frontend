@@ -45,13 +45,16 @@ class _SearchTabState extends State<SearchTab> {
   DateTime? _endDate;
 
   final List<String> _activityTypes = const [
-    'Festival',
-    'Workshop',
+    'Rural',
+    'Cultural',
     'Food',
-    'Nature',
     'Music',
-    'Sports',
-    'Culture',
+    'Workshop',
+    'Market',
+    'Tradition',
+    'Nature',
+    'Family',
+    'Other',
   ];
 
   @override
