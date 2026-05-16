@@ -561,12 +561,12 @@ class MyEventCard extends StatelessWidget {
           SizedBox(
             width: 136,
             child: Column(
-              children: [
+              children: [/*
                 _MyEventActionButton(
                   label: 'Promote',
                   onPressed: onPromote,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 8),*/
                 _MyEventActionButton(
                   label: 'View details',
                   onPressed: onViewDetails,

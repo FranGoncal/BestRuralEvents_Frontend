@@ -203,7 +203,7 @@ class _SignUpPageState extends State<SignUpPage> {
                             controller: _nameController,
                             decoration: InputDecoration(
                               labelText: 'Full name',
-                              hintText: 'Francisco Gonçalves',
+                              hintText: 'João Maria',
                               prefixIcon: const Icon(Icons.person_outline),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),

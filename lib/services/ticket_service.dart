@@ -22,6 +22,29 @@ class BookTicketResult {
   });
 }
 
+class EventTicketDayStats {
+  final DateTime date;
+  final int? capacity;
+  final int ticketsSold;
+  final int? ticketsAvailable;
+
+  EventTicketDayStats({
+    required this.date,
+    required this.capacity,
+    required this.ticketsSold,
+    required this.ticketsAvailable,
+  });
+
+  factory EventTicketDayStats.fromJson(Map<String, dynamic> json) {
+    return EventTicketDayStats(
+      date: DateTime.parse(json['date']),
+      capacity: (json['capacity'] as num?)?.toInt(),
+      ticketsSold: (json['ticketsSold'] as num?)?.toInt() ?? 0,
+      ticketsAvailable: (json['ticketsAvailable'] as num?)?.toInt(),
+    );
+  }
+}
+
 class EventTicketsResult {
   final bool success;
   final String message;
@@ -30,6 +53,7 @@ class EventTicketsResult {
   final int? ticketsSold;
   final int? ticketsAvailable;
   final int? statusCode;
+  final List<EventTicketDayStats> days;
 
   EventTicketsResult({
     required this.success,
@@ -39,6 +63,7 @@ class EventTicketsResult {
     this.ticketsSold,
     this.ticketsAvailable,
     this.statusCode,
+    required this.days
   });
 }
 
@@ -223,6 +248,33 @@ class TicketService {
     }
   }
 
+  Future<bool> cancelTicketOrganizer({
+    required String token,
+    required String ticketId,
+    required String userId,
+  }) async {
+    final url = Uri.parse('$baseUrl/tickets/$ticketId/refund');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+          'X-User-Id': userId,
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } on SocketException {
+      return false;
+    } on TimeoutException {
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> cancelTicket({
     required String token,
     required String ticketId,
@@ -342,12 +394,14 @@ class TicketService {
 
       try {
         decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+
       } catch (_) {
         return EventTicketsResult(
           success: false,
           message: 'Backend responded, but body is not valid JSON.',
           tickets: [],
           statusCode: response.statusCode,
+          days: []
         );
       }
 
@@ -361,6 +415,7 @@ class TicketService {
             'Backend responded 2xx, but JSON is not in expected format. Expected: tickets.',
             tickets: [],
             statusCode: response.statusCode,
+            days: []
           );
         }
 
@@ -368,6 +423,15 @@ class TicketService {
             .where((item) => item is Map<String, dynamic>)
             .map((item) => EventTicket.fromJson(item as Map<String, dynamic>))
             .toList();
+
+        final daysJson = decodedBody['days'];
+
+        final days = daysJson is List
+            ? daysJson
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => EventTicketDayStats.fromJson(item as Map<String, dynamic>))
+            .toList()
+            : <EventTicketDayStats>[];
 
         return EventTicketsResult(
           success: true,
@@ -378,6 +442,7 @@ class TicketService {
           ticketsSold: (decodedBody['ticketsSold'] as num?)?.toInt(),
           ticketsAvailable: (decodedBody['ticketsAvailable'] as num?)?.toInt(),
           statusCode: response.statusCode,
+          days: days
         );
       }
 
@@ -387,24 +452,28 @@ class TicketService {
             'Backend responded with error status ${response.statusCode}.',
         tickets: [],
         statusCode: response.statusCode,
+        days: []
       );
     } on SocketException {
       return EventTicketsResult(
         success: false,
         message: 'No response. Could not connect to backend.',
         tickets: [],
+        days: []
       );
     } on TimeoutException {
       return EventTicketsResult(
         success: false,
         message: 'No response. Request timed out.',
         tickets: [],
+        days: []
       );
     } catch (e) {
       return EventTicketsResult(
         success: false,
         message: 'Unexpected error: $e',
         tickets: [],
+        days: []
       );
     }
   }

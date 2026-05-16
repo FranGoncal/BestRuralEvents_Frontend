@@ -222,7 +222,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             controller: _nameController,
                             decoration: InputDecoration(
                               labelText: 'Full name',
-                              hintText: 'Francisco Gonçalves',
+                              hintText: 'João Maria',
                               prefixIcon: const Icon(Icons.person_outline),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),

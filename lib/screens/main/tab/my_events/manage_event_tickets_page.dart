@@ -27,6 +27,7 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
   int? _ticketsSoldSummary;
   int? _ticketsAvailableSummary;
   List<EventTicket> _tickets = [];
+  List<EventTicketDayStats> _dayStats = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _searchQuery = '';
@@ -65,6 +66,7 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
     if (result.success) {
       setState(() {
         _tickets = result.tickets;
+        _dayStats = result.days;
         _capacity = result.capacity;
         _ticketsSoldSummary = result.ticketsSold;
         _ticketsAvailableSummary = result.ticketsAvailable;
@@ -74,6 +76,7 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
     } else {
       setState(() {
         _tickets = [];
+        _dayStats = [];
         _capacity = null;
         _ticketsSoldSummary = null;
         _ticketsAvailableSummary = null;
@@ -107,7 +110,7 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
 
     if (confirmed != true) return;
 
-    final success = await _ticketService.cancelTicket(
+    final success = await _ticketService.cancelTicketOrganizer(
       token: widget.token,
       ticketId: ticket.id,
       userId: widget.userId
@@ -169,15 +172,18 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
     return '$day/$month/$year';
   }
 
+  String _formatShortDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month';
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryGreen = Color(0xFF2E7D32);
     final tickets = _filteredTickets;
     final totalCapacity = _totalCapacity;
     final ticketsAvailable = _ticketsAvailable;
-    final progress = totalCapacity != null && totalCapacity > 0
-        ? (_ticketsSold / totalCapacity).clamp(0.0, 1.0)
-        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -315,9 +321,9 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${ticket.quantity} ${ticket.quantity == 1 ? 'ticket' : 'tickets'} · '
+                                '${ticket.quantity} ${ticket.quantity == 1 ? 'person' : 'people'} · '
                                     '${ticket.customerName} · '
-                                    '${ticket.createdAt != null ? _formatDate(ticket.createdAt!) : 'No date'}',
+                                    '${ticket.selectedDaysText}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -393,51 +399,76 @@ class _ManageEventTicketsPageState extends State<ManageEventTicketsPage> {
                 ),
                 const SizedBox(height: 16),
 
-                if (totalCapacity != null) ...[
+                if (_dayStats.isNotEmpty) ...[
                   Text(
-                    'Tickets',
+                    'Tickets per day',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey.shade700,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        LinearProgressIndicator(
-                          value: progress ?? 0,
-                          minHeight: 22,
-                          backgroundColor: Colors.grey.shade300,
-                          valueColor: const AlwaysStoppedAnimation<Color>(primaryGreen),
-                        ),
-                        Text(
-                          '$_ticketsSold sold · $ticketsAvailable available',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                  const SizedBox(height: 12),
+
+                  ..._dayStats.map((day) {
+                    final capacity = day.capacity;
+                    final progress = capacity != null && capacity > 0
+                        ? (day.ticketsSold / capacity).clamp(0.0, 1.0)
+                        : 0.0;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatDate(day.date),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF37474F),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                LinearProgressIndicator(
+                                  value: progress,
+                                  minHeight: 22,
+                                  backgroundColor: Colors.grey.shade300,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(primaryGreen),
+                                ),
+                                Text(
+                                  '${day.ticketsSold} sold · ${day.ticketsAvailable ?? '-'} available',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+
+/*                  const SizedBox(height: 6),
                   _SummaryRow(
-                    label: 'Total capacity:',
-                    value: totalCapacity.toString(),
+                    label: 'Capacity per day:',
+                    value: totalCapacity?.toString() ?? '-',
                   ),
                   const SizedBox(height: 6),
                   _SummaryRow(
-                    label: 'Tickets sold:',
+                    label: 'Total tickets sold:',
                     value: _ticketsSold.toString(),
                   ),
                   const SizedBox(height: 6),
                   _SummaryRow(
-                    label: 'Tickets available:',
-                    value: ticketsAvailable.toString(),
-                  ),
+                    label: 'Total tickets available:',
+                    value: ticketsAvailable?.toString() ?? '-',
+                  ),*/
                 ] else ...[
                   Container(
                     width: double.infinity,
