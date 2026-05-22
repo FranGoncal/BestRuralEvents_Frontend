@@ -17,4 +17,7 @@ The app communicates with the backend via the **API Gateway**, consuming REST AP
 Built with Flutter, the app demonstrates cross-platform mobile development integrated with a scalable microservices architecture.
 
 ---
-For a some deeper [documentation](https://deepwiki.com/FranGoncal/BestRuralEvents_Frontend).
+
+## Documentation
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FranGoncal/BestRuralEvents_Frontend)
